@@ -1,0 +1,436 @@
+package org.warp.coordinatesobfuscator;
+
+import com.comphenix.protocol.events.PacketContainer;
+import com.comphenix.protocol.injector.server.TemporaryPlayer;
+import com.comphenix.protocol.wrappers.BlockPosition;
+import com.comphenix.protocol.wrappers.ChunkCoordIntPair;
+import com.comphenix.protocol.wrappers.Converters;
+import com.comphenix.protocol.wrappers.WrappedWatchableObject;
+import com.comphenix.protocol.wrappers.nbt.NbtBase;
+import com.comphenix.protocol.wrappers.nbt.NbtCompound;
+import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import org.bukkit.Location;
+import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.CompassMeta;
+
+public class TranslatorClientbound {
+
+
+	/**
+	 *
+	 * @param packet
+	 * @param player
+	 * @return true to cancel
+	 */
+	public static boolean outgoing(final PacketContainer packet, final Player player) {
+		if (player instanceof TemporaryPlayer) {
+			return false;
+		}
+		CoordinateOffset offset = PlayerManager.getOffsetOrJoinPlayer(player, player.getWorld());
+		Objects.requireNonNull(offset);
+		//System.out.println(packet.getType().name());
+		switch (packet.getType().name()) {
+			case "WINDOW_DATA":
+				break;
+			case "WINDOW_ITEMS":
+				fixWindowItems(packet, offset);
+				break;
+			case "SET_SLOT":
+				fixWindowItem(packet, offset);
+				break;
+			case "SPAWN_POSITION":
+				sendBlockPosition(packet, offset);
+				break;
+			case "RESPAWN":
+				System.out.println("[out]Respawning player");
+				respawn(offset, player);
+				break;
+			case "POSITION":
+				boolean isRelativeX = false;
+				boolean isRelativeZ = false;
+				var items = packet.getSets(Converters.passthrough(Enum.class)).read(0);
+				//noinspection rawtypes
+				for (Enum item : items) {
+					switch (item.name()) {
+						case "X":
+							isRelativeX = true;
+							break;
+						case "Z":
+							isRelativeZ = true;
+							break;
+					}
+				}
+				if (!isRelativeX || !isRelativeZ) {
+					System.out.println("[out]Repositioning player");
+					CoordinateOffset positionOffset;
+					if (!isRelativeX && !isRelativeZ) {
+						positionOffset = respawn(offset, player);
+					} else {
+						positionOffset = offset;
+					}
+					if (packet.getDoubles().size() > 2) {
+						if (!isRelativeX) {
+							packet.getDoubles().modify(0, x -> x == null ? null : x - positionOffset.getX());
+						}
+						if (!isRelativeZ) {
+							packet.getDoubles().modify(2, z -> z == null ? null : z - positionOffset.getZ());
+						}
+					} else {
+						System.err.println("Packet size error");
+					}
+				}
+				break;
+			case "BED":
+				//todo: remove
+				//sendInt(packet, offset, 1);
+				break;
+			case "NAMED_ENTITY_SPAWN":
+			case "SPAWN_ENTITY":
+				Objects.requireNonNull(offset);
+				sendDouble(packet, offset);
+				break;
+			case "SPAWN_ENTITY_LIVING":
+				sendDouble(packet, offset);
+				break;
+			case "SPAWN_ENTITY_PAINTING":
+				sendBlockPosition(packet, offset);
+				break;
+			case "SPAWN_ENTITY_EXPERIENCE_ORB":
+			case "ENTITY_TELEPORT":
+				sendDouble(packet, offset);
+				break;
+			case "UNLOAD_CHUNK":
+			case "LIGHT_UPDATE":
+				sendChunk(packet, offset, false);
+				break;
+			case "MAP_CHUNK":
+				sendChunk(packet, offset, true);
+				break;
+			case "MULTI_BLOCK_CHANGE":
+				sendChunkUpdate(packet, offset);
+				break;
+			case "VIEW_CENTRE":
+				sendIntChunk(packet, offset);
+				break;
+			case "BLOCK_CHANGE":
+				sendBlockPosition(packet, offset);
+				break;
+			case "BLOCK_ACTION":
+				sendBlockPosition(packet, offset);
+				break;
+			case "BLOCK_BREAK":
+			case "BLOCK_BREAK_ANIMATION":
+				sendBlockPosition(packet, offset);
+				break;
+			case "MAP_CHUNK_BULK":
+				sendChunkBulk(packet, offset);
+				break;
+			case "EXPLOSION":
+				sendExplosion(packet, offset);
+				break;
+			case "WORLD_EVENT":
+				sendBlockPosition(packet, offset);
+				break;
+			case "NAMED_SOUND_EFFECT":
+				sendInt8(packet, offset);
+				break;
+			case "WORLD_PARTICLES":
+				sendDouble(packet, offset);
+				break;
+			case "SPAWN_ENTITY_WEATHER":
+				sendDouble(packet, offset);
+				break;
+			case "UPDATE_SIGN":
+				sendBlockPosition(packet, offset);
+				break;
+			case "ENTITY_METADATA":
+				if (packet.getWatchableCollectionModifier().size() > 0) {
+					packet.getWatchableCollectionModifier().modify(0, wrappedWatchableObjects -> {
+						if (wrappedWatchableObjects == null)
+							return null;
+						var result = new ArrayList<WrappedWatchableObject>(wrappedWatchableObjects.size());
+						for (WrappedWatchableObject wrappedWatchableObject : wrappedWatchableObjects) {
+							if (wrappedWatchableObject == null) {
+								result.add(null);
+								continue;
+							}
+
+							var oldValue = wrappedWatchableObject.getValue();
+							if (oldValue instanceof Optional) {
+								//noinspection rawtypes
+								Optional opt = (Optional) oldValue;
+								if (opt.isPresent()) {
+									var val = opt.get();
+									if (TranslatorServerbound.BLOCKPOSITIONCLASS.isInstance(val)) {
+										wrappedWatchableObject.setValue(Optional.of(offsetPositionMc(offset, val)));
+									}
+								}
+							}
+							result.add(wrappedWatchableObject);
+						}
+						return result;
+					});
+				}
+				break;
+			case "TILE_ENTITY_DATA":
+				sendTileEntityData(packet, offset);
+				break;
+			case "OPEN_SIGN_EDITOR":
+				sendBlockPosition(packet, offset);
+				break;
+			case "PLAYER_INFO":
+				break;
+			default:
+				System.out.println(packet.getType().name());
+				break;
+		}
+		return false;
+	}
+
+	private static CoordinateOffset respawn(CoordinateOffset offset, Player player) {
+		boolean hasSetLastLocation = false;
+		var lastLocationOpt = PlayerManager.getLastPlayerLocation(player);
+		if (lastLocationOpt.isPresent()) {
+			var lastLocation = lastLocationOpt.get();
+			if (lastLocation.getWorld().getUID().equals(player.getLocation().getWorld().getUID())) {
+				int clientViewDistance = 64; //player.getClientViewDistance();
+				var minTeleportDistance = clientViewDistance * 2 * 16 + 2;
+				minTeleportDistance *= minTeleportDistance; // squared
+				if (lastLocation.distanceSquared(player.getLocation()) > minTeleportDistance) {
+					offset = PlayerManager.teleportPlayer(player, player.getWorld(), true);
+					System.out.println("Teleporting player. Prev[" + lastLocation.getBlockX() + "," + lastLocation.getBlockZ() + "] Next[" + player.getLocation().getX() + "," + player.getLocation().getZ() + "]" );
+					hasSetLastLocation = true;
+				}
+			}
+		}
+		if (hasSetLastLocation) {
+			PlayerManager.setLastPlayerLocation(player, player.getLocation());
+		}
+		return offset;
+	}
+
+	private static void fixWindowItems(PacketContainer packet, CoordinateOffset offset) {
+		packet.getItemListModifier().modify(0, itemStacks -> {
+			if (itemStacks == null)
+				return null;
+			List<ItemStack> newItems = new ArrayList<>(itemStacks.size());
+			for (ItemStack itemStack : itemStacks) {
+				if (itemStack == null) {
+					newItems.add(null);
+					continue;
+				}
+				newItems.add(transformItemStack(itemStack, offset));
+			}
+			return newItems;
+		});
+	}
+
+	private static void fixWindowItem(PacketContainer packet, CoordinateOffset offset) {
+		packet.getItemModifier().modify(0, itemStack -> {
+			if (itemStack == null) {
+				return null;
+			}
+			return transformItemStack(itemStack, offset);
+		});
+	}
+
+	private static ItemStack transformItemStack(ItemStack itemStack, CoordinateOffset offset) {
+		itemStack = itemStack.clone();
+
+		if (itemStack.hasItemMeta()) {
+			var itemMeta = itemStack.getItemMeta();
+
+			if (itemMeta instanceof CompassMeta) {
+				var compassMeta = (CompassMeta) itemMeta;
+				Location lodestoneLocation = compassMeta.getLodestone();
+				if (lodestoneLocation != null) {
+					compassMeta.setLodestone(lodestoneLocation.subtract(offset.getXInt(), 0, offset.getZInt()));
+					if (!itemStack.setItemMeta(compassMeta)) {
+						System.err.println("Can't apply meta");
+					}
+				}
+			}
+		}
+		return itemStack;
+	}
+
+
+	private static void sendChunk(final PacketContainer packet, final CoordinateOffset offset, boolean includesEntities) {
+		var integers = packet.getIntegers();
+		integers.modify(0, curr_x -> {
+			if (curr_x != null) {
+				return curr_x - offset.getXChunk();
+			} else {
+				return null;
+			}
+		});
+		integers.modify(1, curr_z -> {
+			if (curr_z != null) {
+				return curr_z - offset.getZChunk();
+			} else {
+				return null;
+			}
+		});
+		if (includesEntities) {
+			packet.getListNbtModifier().modify(0, entities -> {
+				if (entities != null) {
+					for (NbtBase<?> entity : entities) {
+						NbtCompound entityCompound = (NbtCompound) entity;
+						if (entityCompound.containsKey("x") && entityCompound.containsKey("z")) {
+							entityCompound.put("x", entityCompound.getInteger("x") - offset.getXInt());
+							entityCompound.put("z", entityCompound.getInteger("z") - offset.getZInt());
+						}
+					}
+					return entities;
+				} else {
+					return null;
+				}
+			});
+		}
+	}
+
+
+	private static void sendChunkBulk(final PacketContainer packet, final CoordinateOffset offset) {
+		if (packet.getIntegerArrays().size() > 1) {
+			final int[] x = packet.getIntegerArrays().read(0).clone();
+			final int[] z = packet.getIntegerArrays().read(1).clone();
+
+			for (int i = 0; i < x.length; i++) {
+
+				x[i] = x[i] - offset.getXChunk();
+				z[i] = z[i] - offset.getZChunk();
+			}
+
+			packet.getIntegerArrays().write(0, x);
+			packet.getIntegerArrays().write(1, z);
+		} else {
+			System.err.println("Packet size error");
+		}
+	}
+
+
+	private static void sendChunkUpdate(final PacketContainer packet, final CoordinateOffset offset) {
+		if (packet.getChunkCoordIntPairs().size() > 0) {
+			var oldPair = packet.getChunkCoordIntPairs().read(0);
+			final ChunkCoordIntPair newCoords = new ChunkCoordIntPair(
+					oldPair.getChunkX() - offset.getXChunk(),
+					oldPair.getChunkZ() - offset.getZChunk()
+			);
+
+			packet.getChunkCoordIntPairs().write(0, newCoords);
+		} else {
+			System.err.println("Packet size error");
+		}
+	}
+
+
+	private static void sendDouble(final PacketContainer packet, final CoordinateOffset offset) {
+		if (packet.getDoubles().size() > 2) {
+			packet.getDoubles().modify(0, x -> x == null ? null : x - offset.getX());
+			packet.getDoubles().modify(2, z -> z == null ? null : z - offset.getZ());
+		} else {
+			System.err.println("Packet size error");
+		}
+	}
+
+
+	private static void sendExplosion(final PacketContainer packet, final CoordinateOffset offset) {
+		sendDouble(packet, offset);
+
+		packet.getBlockPositionCollectionModifier().modify(0, lst -> {
+			if (lst == null) return null;
+			var newLst = new ArrayList<BlockPosition>(lst.size());
+			for (BlockPosition blockPosition : lst) {
+				newLst.add(blockPosition.subtract(new BlockPosition(offset.getXInt(), 0, offset.getZInt())));
+			}
+			return newLst;
+		});
+	}
+
+
+	private static void sendFixedPointNumber(final PacketContainer packet, final CoordinateOffset offset, final int index) {
+		if (packet.getIntegers().size() > 2) {
+			packet.getIntegers().modify(index, curr_x -> curr_x == null ? null : curr_x - (offset.getXInt() << 5));
+			packet.getIntegers().modify(index + 2, curr_z -> curr_z == null ? null : curr_z - (offset.getZInt() << 5));
+		} else {
+			System.err.println("Packet size error");
+		}
+	}
+
+
+	private static void sendFloat(final PacketContainer packet, final CoordinateOffset offset, final int index) {
+		if (packet.getFloat().size() > 2) {
+			packet.getFloat().modify(index, curr_x -> curr_x == null ? null : (float) (curr_x - offset.getX()));
+			packet.getFloat().modify(index + 2, curr_z -> curr_z == null ? null : (float) (curr_z - offset.getZ()));
+		} else {
+			System.err.println("Packet size error");
+		}
+	}
+
+	private static void sendInt(final PacketContainer packet, final CoordinateOffset offset, final int index) {
+		if (packet.getIntegers().size() > 2) {
+		packet.getIntegers().modify(index, curr_x -> curr_x == null ? null : curr_x - offset.getXInt());
+		packet.getIntegers().modify(index + 2, curr_z -> curr_z == null ? null : curr_z - offset.getZInt());
+		} else {
+			System.err.println("Packet size error");
+		}
+	}
+
+	private static void sendIntChunk(final PacketContainer packet, final CoordinateOffset offset) {
+		if (packet.getIntegers().size() > 1) {
+		packet.getIntegers().modify(0, curr_x -> curr_x == null ? null : curr_x - offset.getXChunk());
+		packet.getIntegers().modify(1, curr_z -> curr_z == null ? null : curr_z - offset.getZChunk());
+		} else {
+			System.err.println("Packet size error");
+		}
+	}
+
+
+	private static void sendBlockPosition(final PacketContainer packet, final CoordinateOffset offset) {
+		if (packet.getBlockPositionModifier().size() > 0) {
+			packet.getBlockPositionModifier().modify(0, pos -> offsetPosition(offset, pos));
+		}	else {
+			System.err.println("Packet size error");
+		}
+	}
+
+	private static BlockPosition offsetPosition(CoordinateOffset offset, BlockPosition pos) {
+		if (pos == null) return null;
+		return pos.subtract(new BlockPosition(offset.getXInt(), 0, offset.getZInt()));
+	}
+
+	private static Object offsetPositionMc(CoordinateOffset offset, Object pos) {
+		if (pos == null) return null;
+		try {
+			return TranslatorServerbound.BlockPositionAddMethod.invoke(pos, -offset.getX(), -0d, -offset.getZ());
+		} catch (IllegalAccessException | InvocationTargetException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+
+	private static void sendInt8(final PacketContainer packet, final CoordinateOffset offset) {
+		if (packet.getIntegers().size() > 2) {
+			packet.getIntegers().modify(0, curr_x -> curr_x == null ? null : curr_x - (offset.getXInt() << 3));
+			packet.getIntegers().modify(2, curr_z -> curr_z == null ? null : curr_z - (offset.getZInt() << 3));
+		} else {
+			System.err.println("Packet size error");
+		}
+	}
+
+
+	private static void sendTileEntityData(final PacketContainer packet, final CoordinateOffset offset) {
+		sendBlockPosition(packet, offset);
+
+		final NbtCompound nbt = (NbtCompound) packet.getNbtModifier().read(0).deepClone();
+		if (nbt.containsKey("x") && nbt.containsKey("z")) {
+			nbt.put("x", nbt.getInteger("x") - offset.getXInt());
+			nbt.put("z", nbt.getInteger("z") - offset.getZInt());
+		}
+	}
+}

@@ -1,0 +1,12 @@
+# Eclipse stuff
+/.classpath
+/.project
+/.settings
+/.checkstyle
+
+/bin/
+
+/target/
+
+.idea/
+.papermc/

@@ -1,0 +1,5 @@
+name: ${project.name}
+main: ${project.groupId}.coordinatesobfuscator.CoordinatesObfuscator
+version: ${project.version}
+author: Cavallium
+depend: [ProtocolLib]
