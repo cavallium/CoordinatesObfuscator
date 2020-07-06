@@ -1,7 +1,7 @@
 CoordinatesObfuscator
 ============
 
-CoordinatesObfuscator hides the real coordinates to the players.
+**Hide the real coordinates to the players.**
 
 
 This plugin helps the owner to make sure that players with modded clients do not take unfair advantage of vanilla players when `/gamerule reducedDebugInfo` is set to `true`.
