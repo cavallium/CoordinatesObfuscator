@@ -1,6 +1,8 @@
 package org.warp.coordinatesobfuscator;
 
 import com.comphenix.protocol.PacketType;
+import com.comphenix.protocol.PacketType.Play;
+import com.comphenix.protocol.PacketType.Play.Client;
 import com.comphenix.protocol.PacketType.Play.Server;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
@@ -16,6 +18,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.logging.Logger;
 import org.bukkit.Bukkit;
 import org.bukkit.World.Environment;
 import org.bukkit.event.EventHandler;
@@ -30,6 +33,7 @@ public class CoordinatesObfuscator extends JavaPlugin implements Listener {
 
 	public static final boolean DEBUG_ENABLED = "debug".equals(System.getProperty("coordinates_obfuscator.env"));
 	public static final boolean DISALLOW_REMOVING_NONEXISTENT_COORDINATES = false;
+	private Logger logger;
 
 	@Override
 	public void onDisable() {
@@ -39,7 +43,8 @@ public class CoordinatesObfuscator extends JavaPlugin implements Listener {
 
 	@Override
 	public void onEnable() {
-		PlayerManager.load();
+		this.logger = getLogger();
+		PlayerManager.load(logger);
 
 		Bukkit.getPluginManager().registerEvents(this, this);
 
@@ -102,66 +107,22 @@ public class CoordinatesObfuscator extends JavaPlugin implements Listener {
 					packet = event.getPacket().shallowClone();
 					switch (packet.getType().name()) {
 						case "TILE_ENTITY_DATA":
-							packet = CoordinatesObfuscator.this.cloneTileEntityData(packet);
+							cloneTileEntityData(packet);
 							break;
 						case "MAP_CHUNK":
-							packet = CoordinatesObfuscator.this.cloneMapChunkEntitiesData(packet);
+							cloneMapChunkEntitiesData(packet);
 							break;
 					}
 
 					var player = event.getPlayer();
 
-					boolean cancel = TranslatorClientbound.outgoing(packet, player);
+					boolean cancel = TranslatorClientbound.outgoing(logger, packet, player);
 
 					event.setPacket(packet);
 
 					if (cancel) {
 						event.setCancelled(true);
 					}
-
-					if (false) {
-						try {
-							{
-								var respawnFakePacket = new PacketContainer(Server.RESPAWN);
-								respawnFakePacket.getIntegers().write(0, Environment.NORMAL.getId());
-								respawnFakePacket.getLongs().write(0, 839834L);
-								respawnFakePacket.getGameModes().write(0, NativeGameMode.fromBukkit(player.getGameMode()));
-								respawnFakePacket.getWorldTypeModifier().write(0, player.getWorld().getWorldType());
-								ProtocolLibrary.getProtocolManager().sendServerPacket(player, respawnFakePacket);
-							}
-
-							{
-								var respawnFakePacket = new PacketContainer(Server.RESPAWN);
-								respawnFakePacket.getIntegers().write(0, player.getWorld().getEnvironment().getId());
-								respawnFakePacket.getLongs().write(0, player.getWorld().getSeed());
-								respawnFakePacket.getGameModes().write(0, NativeGameMode.fromBukkit(player.getGameMode()));
-								respawnFakePacket.getWorldTypeModifier().write(0, player.getWorld().getWorldType());
-								ProtocolLibrary.getProtocolManager().sendServerPacket(player, respawnFakePacket);
-							}
-						} catch (InvocationTargetException e) {
-							e.printStackTrace();
-						}
-						/*
-
-						int clientViewDistance = player.getClientViewDistance();
-						//try {
-						for (int xc = -clientViewDistance; xc < clientViewDistance; xc++) {
-							for (int zc = -clientViewDistance; zc < clientViewDistance; zc++) {
-								player.getWorld().refreshChunk(xc, zc);
-
-								//var ucPacket =  new PacketContainer(Server.UNLOAD_CHUNK);
-								//ucPacket.getIntegers().write(0, player.getChunk().getX() + xc);
-								//ucPacket.getIntegers().write(1,player.getChunk().getZ() + zc);
-								//ProtocolLibrary.getProtocolManager().sendServerPacket(player, ucPacket);
-							}
-						}
-						//} catch (InvocationTargetException e) {
-						//	e.printStackTrace();
-						//}
-
-						 */
-					}
-
 				}
 
 			});
@@ -174,7 +135,7 @@ public class CoordinatesObfuscator extends JavaPlugin implements Listener {
 			final PacketAdapter.AdapterParameteters paramsClient = PacketAdapter.params();
 			paramsClient.plugin(this);
 			paramsClient.connectionSide(ConnectionSide.CLIENT_SIDE);
-			paramsClient.listenerPriority(ListenerPriority.LOWEST);
+			paramsClient.listenerPriority(ListenerPriority.HIGHEST);
 			paramsClient.gamePhase(GamePhase.PLAYING);
 
 			packets.clear();
@@ -182,7 +143,11 @@ public class CoordinatesObfuscator extends JavaPlugin implements Listener {
 			packets.add(PacketType.Play.Client.POSITION);
 			packets.add(PacketType.Play.Client.POSITION_LOOK);
 			packets.add(PacketType.Play.Client.BLOCK_DIG);
-			packets.add(PacketType.Play.Client.USE_ITEM); // This is Block Place, not Use_Item. It's a naming bug
+			if (Client.BLOCK_PLACE.getCurrentId() == 44) {
+				packets.add(PacketType.Play.Client.BLOCK_PLACE);
+			} else if (Client.USE_ITEM.getCurrentId() == 44) {
+				packets.add(PacketType.Play.Client.USE_ITEM); // This is Block Place, not Use_Item. It's a naming bug
+			}
 			packets.add(PacketType.Play.Client.USE_ENTITY);
 			packets.add(PacketType.Play.Client.VEHICLE_MOVE);
 			packets.add(PacketType.Play.Client.SET_COMMAND_BLOCK);
@@ -198,7 +163,7 @@ public class CoordinatesObfuscator extends JavaPlugin implements Listener {
 				@Override
 				public void onPacketReceiving(final PacketEvent event) {
 					try {
-						TranslatorServerbound.incoming(event.getPacket(), event.getPlayer());
+						TranslatorServerbound.incoming(logger, event.getPacket(), event.getPlayer());
 					} catch (final UnsupportedOperationException e) {
 						event.setCancelled(true);
 						Bukkit.getServer().broadcastMessage("Failed: " + event.getPacket().getType().name());
@@ -209,13 +174,14 @@ public class CoordinatesObfuscator extends JavaPlugin implements Listener {
 		// End client packets
 	}
 
-	@EventHandler(priority = EventPriority.LOWEST)
+	@EventHandler(priority = EventPriority.HIGHEST)
 	public void onPlayerQuit(final PlayerQuitEvent event) {
 		PlayerManager.exitPlayer(event.getPlayer());
 	}
 
 	@EventHandler(priority = EventPriority.LOWEST)
 	public void onPlayerJoin(final PlayerJoinEvent event) {
+		// This part of code has been commented because this event is fired too late.
 		//PlayerManager.joinPlayer(event.getPlayer());
 	}
 

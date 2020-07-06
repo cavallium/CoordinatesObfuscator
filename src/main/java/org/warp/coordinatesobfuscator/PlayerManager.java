@@ -4,6 +4,7 @@ import com.comphenix.protocol.injector.server.TemporaryPlayer;
 import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.logging.Logger;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
@@ -11,6 +12,7 @@ import org.bukkit.entity.Player;
 public class PlayerManager {
 
 	private static final Random random = new Random();
+	private static Logger logger;
 	private static CoordsOffsetsManager coordsOffsetsManager;
 	private static LastPlayerCoordinateManager lastPlayerCoordinateManager;
 
@@ -63,12 +65,14 @@ public class PlayerManager {
 		lastPlayerCoordinateManager.resetLastPlayerLocation(player.getUniqueId());
 	}
 
-	public static void load() {
+	public static void load(Logger pluginLogger) {
+		logger = pluginLogger;
 		coordsOffsetsManager = new CoordsOffsetsManager();
 		lastPlayerCoordinateManager = new LastPlayerCoordinateManager();
 	}
 
 	public static void unload() {
+		logger = null;
 		coordsOffsetsManager = null;
 		lastPlayerCoordinateManager = null;
 	}

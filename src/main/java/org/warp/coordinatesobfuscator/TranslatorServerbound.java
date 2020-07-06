@@ -1,11 +1,14 @@
 package org.warp.coordinatesobfuscator;
 
+import com.comphenix.protocol.PacketType;
+import com.comphenix.protocol.PacketType.Play.Client;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.injector.server.TemporaryPlayer;
 import com.comphenix.protocol.wrappers.BlockPosition;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Objects;
+import java.util.logging.Logger;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
@@ -46,74 +49,78 @@ public class TranslatorServerbound {
 		}
 	}
 
-	public static void incoming(final PacketContainer packet, final Player player) {
+	public static void incoming(Logger logger, final PacketContainer packet, final Player player) {
 		if (player instanceof TemporaryPlayer) {
 			return;
 		}
 		CoordinateOffset offset = PlayerManager.getOffsetOrJoinPlayer(player, player.getWorld());
 		Objects.requireNonNull(offset);
-		var playerLoc = player.getLocation();
-		if (CoordinatesObfuscator.DEBUG_ENABLED && System.currentTimeMillis() % 1000L < 10L) {
-			System.out.println(
-					"Fake position: " + (playerLoc.getX() + offset.getX()) + "," + (playerLoc.getZ() + offset.getZ())
-							+ "\nReal position: " + playerLoc.getX() + "," + playerLoc.getZ());
-		}
 		switch (packet.getType().name()) {
 			case "POSITION":
 			case "VEHICLE_MOVE":
 			case "POSITION_LOOK":
 				PlayerManager.setLastPlayerLocation(player, player.getLocation());
-				recvDouble(packet, offset);
+				recvDouble(logger, packet, offset);
 				break;
 			case "STRUCT":
 			case "SET_JIGSAW":
 			case "SET_COMMAND_BLOCK":
 			case "UPDATE_SIGN":
 			case "BLOCK_DIG":
-				recvPosition(packet, offset);
+				recvPosition(logger, packet, offset);
+				break;
+			case "BLOCK_PLACE":
+				if (Client.BLOCK_PLACE.getCurrentId() == 44) {
+					recvMovingPosition(logger, packet, offset);
+				}
 				break;
 			case "USE_ITEM": // This is Block Place, not Use_Item. It's a naming bug
-				recvMovingPosition(packet, offset);
+				if (Client.USE_ITEM.getCurrentId() == 44) {
+					recvMovingPosition(logger, packet, offset);
+				}
 				break;
 			case "USE_ENTITY":
 				break;
 		}
 	}
 
-	private static void recvDouble(final PacketContainer packet, final CoordinateOffset offset) {
+	private static void recvDouble(Logger logger, final PacketContainer packet, final CoordinateOffset offset) {
 		if (packet.getDoubles().size() > 2) {
 			packet.getDoubles().modify(0, x -> x == null ? null : x + offset.getX());
 			packet.getDoubles().modify(2, z -> z == null ? null : z + offset.getZ());
 		} else {
-			System.err.println("Packet size error");
+			logger.severe("Packet size error");
 		}
 	}
 
 
-	private static void recvInt(final PacketContainer packet, final CoordinateOffset offset, final int index) {
+	private static void recvInt(Logger logger, final PacketContainer packet, final CoordinateOffset offset, final int index) {
 		if (packet.getIntegers().size() > 2) {
 			packet.getIntegers().modify(index, curr_x -> curr_x == null ? null : curr_x + offset.getXInt());
 			packet.getIntegers().modify(index + 2, curr_z -> curr_z == null ? null : curr_z + offset.getZInt());
 		} else {
-			System.err.println("Packet size error");
+			logger.severe("Packet size error");
 		}
 	}
 
-	private static void recvPosition(final PacketContainer packet, final CoordinateOffset offset) {
+	private static void recvPosition(Logger logger, final PacketContainer packet, final CoordinateOffset offset) {
 		if (packet.getBlockPositionModifier().size() > 0) {
-			packet.getBlockPositionModifier().modify(0, pos -> offsetPosition(offset, pos));
+			packet.getBlockPositionModifier().modify(0, pos -> offsetPosition(logger, offset, pos));
 		} else {
-			System.err.println("Packet size error");
+			logger.severe("Packet size error");
 		}
 	}
 
-	private static BlockPosition offsetPosition(CoordinateOffset offset, BlockPosition pos) {
+	private static BlockPosition offsetPosition(Logger logger, CoordinateOffset offset, BlockPosition pos) {
 		if (pos == null) return null;
 		return pos.add(new BlockPosition(offset.getXInt(), 0, offset.getZInt()));
 	}
 
-	private static void recvMovingPosition(final PacketContainer packet, final CoordinateOffset offset) {
+	private static void recvMovingPosition(Logger logger, final PacketContainer packet, final CoordinateOffset offset) {
 		var mopb = packet.getModifier().read(0);
+		if (mopb == null) {
+			return;
+		}
 		if (!MOVINGOBJECTPOSITIONBLOCKCLASS.isInstance(mopb)) {
 			throw new RuntimeException("Wrong type");
 		}
