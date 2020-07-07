@@ -143,9 +143,9 @@ public class CoordinatesObfuscator extends JavaPlugin implements Listener {
 			packets.add(PacketType.Play.Client.POSITION);
 			packets.add(PacketType.Play.Client.POSITION_LOOK);
 			packets.add(PacketType.Play.Client.BLOCK_DIG);
-			if (Client.BLOCK_PLACE.getCurrentId() == 44) {
+			if (Client.BLOCK_PLACE.getCurrentId() == 0x2D) {
 				packets.add(PacketType.Play.Client.BLOCK_PLACE);
-			} else if (Client.USE_ITEM.getCurrentId() == 44) {
+			} else if (Client.USE_ITEM.getCurrentId() == 0x2D) {
 				packets.add(PacketType.Play.Client.USE_ITEM); // This is Block Place, not Use_Item. It's a naming bug
 			}
 			packets.add(PacketType.Play.Client.USE_ENTITY);

@@ -70,12 +70,12 @@ public class TranslatorServerbound {
 				recvPosition(logger, packet, offset);
 				break;
 			case "BLOCK_PLACE":
-				if (Client.BLOCK_PLACE.getCurrentId() == 44) {
+				if (Client.BLOCK_PLACE.getCurrentId() == 0x2D) {
 					recvMovingPosition(logger, packet, offset);
 				}
 				break;
 			case "USE_ITEM": // This is Block Place, not Use_Item. It's a naming bug
-				if (Client.USE_ITEM.getCurrentId() == 44) {
+				if (Client.USE_ITEM.getCurrentId() == 0x2D) {
 					recvMovingPosition(logger, packet, offset);
 				}
 				break;
