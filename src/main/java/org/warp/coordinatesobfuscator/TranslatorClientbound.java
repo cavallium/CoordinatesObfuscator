@@ -23,7 +23,7 @@ import org.bukkit.inventory.meta.CompassMeta;
 public class TranslatorClientbound {
 
 
-	/**
+	/**ENTITY_METADATA
 	 *
 	 *
 	 * @param logger
@@ -423,10 +423,18 @@ public class TranslatorClientbound {
 	private static void sendTileEntityData(Logger logger, final PacketContainer packet, final CoordinateOffset offset) {
 		sendBlockPosition(logger, packet, offset);
 
-		final NbtCompound nbt = (NbtCompound) packet.getNbtModifier().read(0).deepClone();
-		if (nbt.containsKey("x") && nbt.containsKey("z")) {
-			nbt.put("x", nbt.getInteger("x") - offset.getXInt());
-			nbt.put("z", nbt.getInteger("z") - offset.getZInt());
-		}
+		packet.getNbtModifier().modify(0, nbtBase -> {
+			if (nbtBase == null) return null;
+			if (nbtBase instanceof NbtCompound) {
+				final NbtCompound nbt = (NbtCompound) (((NbtCompound) nbtBase).deepClone());
+				if (nbt.containsKey("x") && nbt.containsKey("z")) {
+					nbt.put("x", nbt.getInteger("x") - offset.getXInt());
+					nbt.put("z", nbt.getInteger("z") - offset.getZInt());
+				}
+				return nbt;
+			} else {
+				return nbtBase;
+			}
+		});
 	}
 }
