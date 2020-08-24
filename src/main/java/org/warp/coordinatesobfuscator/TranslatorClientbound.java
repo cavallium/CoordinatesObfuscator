@@ -35,6 +35,7 @@ public class TranslatorClientbound {
 	public static final Method SectionPositionGetChunkXMethod;
 	public static final Method SectionPositionGetChunkYMethod;
 	public static final Method SectionPositionGetChunkZMethod;
+	private static final boolean USE_1_16_R2;
 
 	static {
 		// This gets the server version.
@@ -42,6 +43,7 @@ public class TranslatorClientbound {
 		name = name.substring(name.indexOf("craftbukkit.") + "craftbukkit.".length());
 		name = name.substring(0, name.indexOf("."));
 		SERVER_VERSION = name;
+		USE_1_16_R2 = SERVER_VERSION.equals("v1_16_R2");
 		try {
 			SECTIONPOSITIONCLASS = Class.forName("net.minecraft.server." + SERVER_VERSION + ".SectionPosition");
 			SectionPositionCreateMethod = SECTIONPOSITIONCLASS.getDeclaredMethod("a", int.class, int.class, int.class);
@@ -364,22 +366,36 @@ public class TranslatorClientbound {
 	}
 
 	private static void sendChunkUpdate(Logger logger, final PacketContainer packet, final CoordinateOffset offset) {
-		Object sp = packet.getModifier().read(0);
-		if (sp == null) {
-			return;
-		}
-		if (!SECTIONPOSITIONCLASS.isInstance(sp)) {
-			throw new RuntimeException("Wrong type");
-		}
-		try {
-			int sectionX = (int) SectionPositionGetChunkXMethod.invoke(sp) - offset.getXChunk();
-			int sectionY = (int) SectionPositionGetChunkYMethod.invoke(sp);
-			int sectionZ = (int) SectionPositionGetChunkZMethod.invoke(sp) - offset.getZChunk();
-			Object newSectionPosition = SectionPositionCreateMethod.invoke(null, sectionX, sectionY, sectionZ);
-			packet.getModifier().write(0, newSectionPosition);
-		} catch (IllegalAccessException | InvocationTargetException e) {
-			logger.severe(e.getLocalizedMessage());
-			e.printStackTrace();
+		if (USE_1_16_R2) {
+			Object sp = packet.getModifier().read(0);
+			if (sp == null) {
+				return;
+			}
+			if (!SECTIONPOSITIONCLASS.isInstance(sp)) {
+				throw new RuntimeException("Wrong type");
+			}
+			try {
+				int sectionX = (int) SectionPositionGetChunkXMethod.invoke(sp) - offset.getXChunk();
+				int sectionY = (int) SectionPositionGetChunkYMethod.invoke(sp);
+				int sectionZ = (int) SectionPositionGetChunkZMethod.invoke(sp) - offset.getZChunk();
+				Object newSectionPosition = SectionPositionCreateMethod.invoke(null, sectionX, sectionY, sectionZ);
+				packet.getModifier().write(0, newSectionPosition);
+			} catch (IllegalAccessException | InvocationTargetException e) {
+				logger.severe(e.getLocalizedMessage());
+				e.printStackTrace();
+			}
+		} else {
+			if (packet.getChunkCoordIntPairs().size() > 0) {
+				ChunkCoordIntPair oldPair = packet.getChunkCoordIntPairs().read(0);
+				final ChunkCoordIntPair newCoords = new ChunkCoordIntPair(
+						oldPair.getChunkX() - offset.getXChunk(),
+						oldPair.getChunkZ() - offset.getZChunk()
+				);
+
+				packet.getChunkCoordIntPairs().write(0, newCoords);
+			} else {
+				logger.severe("Packet size error");
+			}
 		}
 	}
 
