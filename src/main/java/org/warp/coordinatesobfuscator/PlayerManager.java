@@ -12,6 +12,8 @@ import org.bukkit.entity.Player;
 public class PlayerManager {
 
 	private static final Random random = new Random();
+	private static final int staticXOffset = getRandomChunkOffsetBase();
+	private static final int staticZOffset = getRandomChunkOffsetBase();
 	private static Logger logger;
 	private static CoordsOffsetsManager coordsOffsetsManager;
 	private static LastPlayerCoordinateManager lastPlayerCoordinateManager;
@@ -22,14 +24,14 @@ public class PlayerManager {
 	}
 
 	public static CoordinateOffset respawnPlayer(final Player player, final World world) {
-		var offset = generateOffset();
+		CoordinateOffset offset = generateOffset();
 		coordsOffsetsManager.replace(player, world, offset);
 		lastPlayerCoordinateManager.setLastPlayerLocation(player.getUniqueId(), player.getLocation());
 		return offset;
 	}
 
 	public static CoordinateOffset teleportPlayer(final Player player, final World world, boolean overrideLastLocation) {
-		var offset = generateOffset();
+		CoordinateOffset offset = generateOffset();
 		coordsOffsetsManager.replace(player, world, offset);
 		if (overrideLastLocation) {
 			lastPlayerCoordinateManager.setLastPlayerLocation(player.getUniqueId(), player.getLocation());
@@ -49,11 +51,15 @@ public class PlayerManager {
 
 	private static CoordinateOffset generateOffset() {
 		//return CoordinateOffset.of(64 * 16, 64 * 16);
-		return CoordinateOffset.of(getRandomChunkOffset() * 16, getRandomChunkOffset() * 16);
+		return CoordinateOffset.of(getRandomChunkOffset(true) * 16, getRandomChunkOffset(false) * 16);
 	}
 
-	private static int getRandomChunkOffset() {
-		var number = 64 + random.nextInt(31000 - 64);
+	private static int getRandomChunkOffset(boolean x) {
+		return getRandomChunkOffsetBase() + (x ? staticXOffset : staticZOffset);
+	}
+
+	private static int getRandomChunkOffsetBase() {
+		int number = 64 + random.nextInt((int) Math.floor(496000d / 16d) - 64);
 		if (random.nextBoolean()) {
 			number *= -1;
 		}
@@ -91,7 +97,7 @@ public class PlayerManager {
 
 	public static CoordinateOffset getOffsetOrJoinPlayer(Player player, World world) {
 		AtomicBoolean generated = new AtomicBoolean(false);
-		var result = coordsOffsetsManager.getOrPut(player, world, () -> {
+		CoordinateOffset result = coordsOffsetsManager.getOrPut(player, world, () -> {
 			generated.set(true);
 			return generateOffset();
 		});

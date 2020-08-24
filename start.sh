@@ -1,13 +1,13 @@
 WORKSPACE=".papermc"
-MC_VERSION="1.16.1"
-PAPER_BUILD="47"
+MC_VERSION="1.16.2"
+PAPER_BUILD="1"
 
 ## ============== DO NOT EDIT THE SCRIPT BELOW UNLESS YOU KNOW WHAT YOU ARE DOING ============== ##
 
 #cd || exit # Moving to the user folder or exit if it fails.
 
-mkdir $WORKSPACE || true
-mkdir $WORKSPACE/plugins || true
+[ -d $WORKSPACE ] || mkdir $WORKSPACE
+[ -d $WORKSPACE ] || mkdir $WORKSPACE/plugins
 cp target/*.jar $WORKSPACE/plugins || exit
 
 # Checking the workspace folder availability.
@@ -26,4 +26,4 @@ if [ ! -f $PAPER_JAR ]; then
   wget -O $PAPER_JAR $PAPER_LNK
 fi
 
-java -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005 -jar $PAPER_JAR nogui
+/usr/lib/jvm/java-1.8.0-openjdk-amd64/bin/java -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005 -jar $PAPER_JAR nogui

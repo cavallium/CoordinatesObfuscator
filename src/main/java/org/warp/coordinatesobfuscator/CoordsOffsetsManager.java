@@ -59,11 +59,11 @@ public class CoordsOffsetsManager {
 	}
 
 	public synchronized CoordinateOffset getOrPut(Player player, World world, Supplier<CoordinateOffset> putSupplier) {
-		var currentValue = getOrNull(player, world);
+		CoordinateOffset currentValue = getOrNull(player, world);
 		if (currentValue != null) {
 			return currentValue;
 		} else {
-			var value = putSupplier.get();
+			CoordinateOffset value = putSupplier.get();
 			put(player, world, value);
 			return value;
 		}
@@ -71,9 +71,9 @@ public class CoordsOffsetsManager {
 
 	private void removeValue(UUID playerUUID, UUID worldUUID) {
 		System.out.println("Deleting player coordinates offset");
-		var worldsMap = playerCoordsPerWorld.get(playerUUID);
+		HashMap<UUID, CoordinateOffset> worldsMap = playerCoordsPerWorld.get(playerUUID);
 		if (worldsMap != null) {
-			var playerPosition = worldsMap.remove(worldUUID);
+			CoordinateOffset playerPosition = worldsMap.remove(worldUUID);
 			if (playerPosition == null) {
 				if (CoordinatesObfuscator.DISALLOW_REMOVING_NONEXISTENT_COORDINATES) {
 					throw new UnsupportedOperationException("Trying to remove nonexistent coordinate offset");
@@ -88,7 +88,7 @@ public class CoordsOffsetsManager {
 
 	private void removeValue(UUID playerUUID) {
 		System.out.println("Deleting player coordinates offset (globally)");
-		var worldsMap = playerCoordsPerWorld.remove(playerUUID);
+		HashMap<UUID, CoordinateOffset> worldsMap = playerCoordsPerWorld.remove(playerUUID);
 		if (worldsMap == null) {
 			if (CoordinatesObfuscator.DISALLOW_REMOVING_NONEXISTENT_COORDINATES) {
 				throw new UnsupportedOperationException("Trying to remove nonexistent coordinate offset");
@@ -99,7 +99,7 @@ public class CoordsOffsetsManager {
 	private void setValue(UUID playerUUID, UUID worldUUID, CoordinateOffset value) {
 		System.out.println("Setting player coordinates offset");
 		value.validate();
-		var worldsMap = playerCoordsPerWorld.computeIfAbsent(playerUUID, (playerUid) -> new HashMap<>());
+		HashMap<UUID, CoordinateOffset> worldsMap = playerCoordsPerWorld.computeIfAbsent(playerUUID, (playerUid) -> new HashMap<>());
 		if (worldsMap.containsKey(worldUUID)) {
 			throw new UnsupportedOperationException("Trying to overwrite coordinate offset");
 		} else {
@@ -110,7 +110,7 @@ public class CoordsOffsetsManager {
 	private void replaceValue(UUID playerUUID, UUID worldUUID, CoordinateOffset value) {
 		System.out.println("Replacing player coordinates offset");
 		value.validate();
-		var worldsMap = playerCoordsPerWorld.computeIfAbsent(playerUUID, (playerUid) -> new HashMap<>());
+		HashMap<UUID, CoordinateOffset> worldsMap = playerCoordsPerWorld.computeIfAbsent(playerUUID, (playerUid) -> new HashMap<>());
 		if (!worldsMap.containsKey(worldUUID)) {
 			throw new UnsupportedOperationException("Trying to replace nonexistent coordinate offset");
 		} else {
@@ -122,11 +122,11 @@ public class CoordsOffsetsManager {
 	}
 
 	private CoordinateOffset getValue(UUID playerUUID, UUID worldUUID) {
-		var worldsMap = playerCoordsPerWorld.get(playerUUID);
+		HashMap<UUID, CoordinateOffset> worldsMap = playerCoordsPerWorld.get(playerUUID);
 		if (worldsMap == null) {
 			throw new UnsupportedOperationException("Trying to get nonexistent coordinate offset");
 		}
-		var offset = worldsMap.get(worldUUID);
+		CoordinateOffset offset = worldsMap.get(worldUUID);
 		if (offset == null) {
 			throw new UnsupportedOperationException("Trying to get nonexistent coordinate offset");
 		}
@@ -134,11 +134,11 @@ public class CoordsOffsetsManager {
 	}
 
 	private CoordinateOffset getValueOrNull(UUID playerUUID, UUID worldUUID) {
-		var worldsMap = playerCoordsPerWorld.get(playerUUID);
+		HashMap<UUID, CoordinateOffset> worldsMap = playerCoordsPerWorld.get(playerUUID);
 		if (worldsMap == null) {
 			return null;
 		}
-		var offset = worldsMap.get(worldUUID);
+		CoordinateOffset offset = worldsMap.get(worldUUID);
 		if (offset == null) {
 			return null;
 		}

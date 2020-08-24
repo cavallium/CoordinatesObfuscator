@@ -117,7 +117,7 @@ public class TranslatorServerbound {
 	}
 
 	private static void recvMovingPosition(Logger logger, final PacketContainer packet, final CoordinateOffset offset) {
-		var mopb = packet.getModifier().read(0);
+		Object mopb = packet.getModifier().read(0);
 		if (mopb == null) {
 			return;
 		}
@@ -125,17 +125,18 @@ public class TranslatorServerbound {
 			throw new RuntimeException("Wrong type");
 		}
 		try {
-			var blockPosition = MovingObjectPositionBlockGetBlockPositionMethod.invoke(mopb);
-			var direction = MovingObjectPositionBlockGetDirectionMethod.invoke(mopb);
-			var vec3d = MovingObjectPositionBlockGetPosMethod.invoke(mopb);
+			Object blockPosition = MovingObjectPositionBlockGetBlockPositionMethod.invoke(mopb);
+			Object direction = MovingObjectPositionBlockGetDirectionMethod.invoke(mopb);
+			Object vec3d = MovingObjectPositionBlockGetPosMethod.invoke(mopb);
 
-			var newVec3d = Vec3DaddMethod.invoke(vec3d, offset.getX(), 0, offset.getZ());
+			Object newVec3d = Vec3DaddMethod.invoke(vec3d, offset.getX(), 0, offset.getZ());
 
-			var newBlockPosition = BlockPositionAddMethod.invoke(blockPosition, offset.getX(), 0, offset.getZ());
+			Object newBlockPosition = BlockPositionAddMethod.invoke(blockPosition, offset.getX(), 0, offset.getZ());
 
-			var result = MovingObjectPositionBlockStaticConstructor.invoke(null, newVec3d, direction, newBlockPosition);
+			Object result = MovingObjectPositionBlockStaticConstructor.invoke(null, newVec3d, direction, newBlockPosition);
 			packet.getModifier().write(0, result);
 		} catch (IllegalAccessException | InvocationTargetException e) {
+			logger.severe(e.getLocalizedMessage());
 			e.printStackTrace();
 		}
 	}

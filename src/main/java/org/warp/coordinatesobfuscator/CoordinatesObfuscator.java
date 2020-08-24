@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.logging.Logger;
 import org.bukkit.Bukkit;
 import org.bukkit.World.Environment;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -114,7 +115,7 @@ public class CoordinatesObfuscator extends JavaPlugin implements Listener {
 							break;
 					}
 
-					var player = event.getPlayer();
+					Player player = event.getPlayer();
 
 					boolean cancel = TranslatorClientbound.outgoing(logger, packet, player);
 
@@ -199,7 +200,7 @@ public class CoordinatesObfuscator extends JavaPlugin implements Listener {
 	private PacketContainer cloneMapChunkEntitiesData(PacketContainer packet) {
 		int i = 0;
 		for (final List<NbtBase<?>> obj : packet.getListNbtModifier().getValues()) {
-			var newList = new ArrayList<NbtBase<?>>(obj.size());
+			ArrayList<NbtBase<?>> newList = new ArrayList<NbtBase<?>>(obj.size());
 			for (NbtBase<?> nbtBase : obj) {
 				newList.add(nbtBase.deepClone());
 			}

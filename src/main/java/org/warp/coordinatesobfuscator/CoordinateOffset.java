@@ -38,11 +38,11 @@ public final class CoordinateOffset {
 		if ((int) (Math.round(z / 16f) * 16) != z) {
 			throw new IllegalArgumentException("z is not aligned with the chunks!");
 		}
-		var reconvertedX = (double) ((int) x);
+		double reconvertedX = (double) ((int) x);
 		if (reconvertedX != x) {
 			throw new IllegalArgumentException("x is not safe to convert between double and int");
 		}
-		var reconvertedZ = (double) ((int) z);
+		double reconvertedZ = (double) ((int) z);
 		if (reconvertedZ != z) {
 			throw new IllegalArgumentException("z is not safe to convert between double and int");
 		}

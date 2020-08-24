@@ -2,25 +2,79 @@ package org.warp.coordinatesobfuscator;
 
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.injector.server.TemporaryPlayer;
+import com.comphenix.protocol.reflect.StructureModifier;
 import com.comphenix.protocol.wrappers.BlockPosition;
 import com.comphenix.protocol.wrappers.ChunkCoordIntPair;
 import com.comphenix.protocol.wrappers.Converters;
 import com.comphenix.protocol.wrappers.WrappedWatchableObject;
 import com.comphenix.protocol.wrappers.nbt.NbtBase;
 import com.comphenix.protocol.wrappers.nbt.NbtCompound;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.logging.Logger;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.CompassMeta;
+import org.bukkit.inventory.meta.ItemMeta;
 
 public class TranslatorClientbound {
+
+	private static final String SERVER_VERSION;
+	public static final Class<?> SECTIONPOSITIONCLASS;
+	public static final Method SectionPositionCreateMethod;
+	public static final Method SectionPositionGetChunkXMethod;
+	public static final Method SectionPositionGetChunkYMethod;
+	public static final Method SectionPositionGetChunkZMethod;
+
+	static {
+		// This gets the server version.
+		String name = Bukkit.getServer().getClass().getName();
+		name = name.substring(name.indexOf("craftbukkit.") + "craftbukkit.".length());
+		name = name.substring(0, name.indexOf("."));
+		SERVER_VERSION = name;
+		try {
+			SECTIONPOSITIONCLASS = Class.forName("net.minecraft.server." + SERVER_VERSION + ".SectionPosition");
+			SectionPositionCreateMethod = SECTIONPOSITIONCLASS.getDeclaredMethod("a", int.class, int.class, int.class);
+			SectionPositionGetChunkXMethod = SECTIONPOSITIONCLASS.getDeclaredMethod("a");
+			SectionPositionGetChunkYMethod = SECTIONPOSITIONCLASS.getDeclaredMethod("b");
+			SectionPositionGetChunkZMethod = SECTIONPOSITIONCLASS.getDeclaredMethod("c");
+		} catch (ClassNotFoundException | NoSuchMethodException e) {
+			throw new RuntimeException(e);
+		}
+
+		try {
+			Field modifiersField = Field.class.getDeclaredField("modifiers");
+			modifiersField.setAccessible(true);
+
+			Class<?> BLOCKCLASS = Class.forName("net.minecraft.server." + SERVER_VERSION + ".Block");
+			Method BlockNewVoxelShapeMethod = BLOCKCLASS.getDeclaredMethod("a", double.class, double.class, double.class, double.class, double.class, double.class);
+			Class<?> BLOCKBAMBOOCLASS = Class.forName("net.minecraft.server." + SERVER_VERSION + ".BlockBamboo");
+			Field blockBambooBoundingBoxA = BLOCKBAMBOOCLASS.getDeclaredField("a");
+			blockBambooBoundingBoxA.setAccessible(true);
+			modifiersField.setInt(blockBambooBoundingBoxA, blockBambooBoundingBoxA.getModifiers() & ~Modifier.FINAL);
+			blockBambooBoundingBoxA.set(null, BlockNewVoxelShapeMethod.invoke(null, 0.0D, 0.0D, 0.0D, 0.0D, 0.0D, 0.0D));
+			Field blockBambooBoundingBoxB = BLOCKBAMBOOCLASS.getDeclaredField("b");
+			blockBambooBoundingBoxB.setAccessible(true);
+			modifiersField.setInt(blockBambooBoundingBoxB, blockBambooBoundingBoxB.getModifiers() & ~Modifier.FINAL);
+			blockBambooBoundingBoxB.set(null, BlockNewVoxelShapeMethod.invoke(null, 0.0D, 0.0D, 0.0D, 0.0D, 0.0D, 0.0D));
+			Field blockBambooBoundingBoxC = BLOCKBAMBOOCLASS.getDeclaredField("c");
+			blockBambooBoundingBoxC.setAccessible(true);
+			modifiersField.setInt(blockBambooBoundingBoxC, blockBambooBoundingBoxC.getModifiers() & ~Modifier.FINAL);
+			blockBambooBoundingBoxC.set(null, BlockNewVoxelShapeMethod.invoke(null, 0.0D, 0.0D, 0.0D, 0.0D, 0.0D, 0.0D));
+		} catch (ClassNotFoundException | NoSuchMethodException | NoSuchFieldException | IllegalAccessException | InvocationTargetException ex) {
+			System.err.println("Can't disable bamboo bounding boxes. Please use Java 8. " + ex.getLocalizedMessage());
+		}
+	}
 
 
 	/**ENTITY_METADATA
@@ -64,7 +118,7 @@ public class TranslatorClientbound {
 			case "POSITION":
 				boolean isRelativeX = false;
 				boolean isRelativeZ = false;
-				var items = packet.getSets(Converters.passthrough(Enum.class)).read(0);
+				Set<Enum> items = packet.getSets(Converters.passthrough(Enum.class)).read(0);
 				//noinspection rawtypes
 				for (Enum item : items) {
 					switch (item.name()) {
@@ -141,19 +195,19 @@ public class TranslatorClientbound {
 					packet.getWatchableCollectionModifier().modify(0, wrappedWatchableObjects -> {
 						if (wrappedWatchableObjects == null)
 							return null;
-						var result = new ArrayList<WrappedWatchableObject>(wrappedWatchableObjects.size());
+						ArrayList<WrappedWatchableObject> result = new ArrayList<WrappedWatchableObject>(wrappedWatchableObjects.size());
 						for (WrappedWatchableObject wrappedWatchableObject : wrappedWatchableObjects) {
 							if (wrappedWatchableObject == null) {
 								result.add(null);
 								continue;
 							}
 
-							var oldValue = wrappedWatchableObject.getValue();
+							Object oldValue = wrappedWatchableObject.getValue();
 							if (oldValue instanceof Optional) {
 								//noinspection rawtypes
 								Optional opt = (Optional) oldValue;
 								if (opt.isPresent()) {
-									var val = opt.get();
+									Object val = opt.get();
 									if (TranslatorServerbound.BLOCKPOSITIONCLASS.isInstance(val)) {
 										wrappedWatchableObject.setValue(Optional.of(offsetPositionMc(logger, offset, val)));
 									}
@@ -179,12 +233,12 @@ public class TranslatorClientbound {
 
 	private static CoordinateOffset respawn(Logger logger, CoordinateOffset offset, Player player) {
 		boolean hasSetLastLocation = false;
-		var lastLocationOpt = PlayerManager.getLastPlayerLocation(player);
+		Optional<Location> lastLocationOpt = PlayerManager.getLastPlayerLocation(player);
 		if (lastLocationOpt.isPresent()) {
-			var lastLocation = lastLocationOpt.get();
+			Location lastLocation = lastLocationOpt.get();
 			if (lastLocation.getWorld().getUID().equals(player.getLocation().getWorld().getUID())) {
 				int clientViewDistance = 64; //player.getClientViewDistance();
-				var minTeleportDistance = clientViewDistance * 2 * 16 + 2;
+				int minTeleportDistance = clientViewDistance * 2 * 16 + 2;
 				minTeleportDistance *= minTeleportDistance; // squared
 				if (lastLocation.distanceSquared(player.getLocation()) > minTeleportDistance) {
 					offset = PlayerManager.teleportPlayer(player, player.getWorld(), true);
@@ -228,10 +282,10 @@ public class TranslatorClientbound {
 		itemStack = itemStack.clone();
 
 		if (itemStack.hasItemMeta()) {
-			var itemMeta = itemStack.getItemMeta();
+			ItemMeta itemMeta = itemStack.getItemMeta();
 
 			if (itemMeta instanceof CompassMeta) {
-				var compassMeta = (CompassMeta) itemMeta;
+				CompassMeta compassMeta = (CompassMeta) itemMeta;
 				Location lodestoneLocation = compassMeta.getLodestone();
 				if (lodestoneLocation != null) {
 					compassMeta.setLodestone(lodestoneLocation.subtract(offset.getXInt(), 0, offset.getZInt()));
@@ -246,7 +300,7 @@ public class TranslatorClientbound {
 
 
 	private static void sendChunk(Logger logger, final PacketContainer packet, final CoordinateOffset offset, boolean includesEntities, boolean includeLight) {
-		var integers = packet.getIntegers();
+		StructureModifier<Integer> integers = packet.getIntegers();
 		integers.modify(0, curr_x -> {
 			if (curr_x != null) {
 				return curr_x - offset.getXChunk();
@@ -262,11 +316,11 @@ public class TranslatorClientbound {
 			}
 		});
 		if (includeLight) {
-			var byteArrays = packet.getLists(Converters.passthrough(byte[].class));
+			StructureModifier<List<byte[]>> byteArrays = packet.getLists(Converters.passthrough(byte[].class));
 			for (int i = 0; i < 2; i++) {
 				byteArrays.modify(i, list -> {
 					if (list == null) return null;
-					var newList = new ArrayList<>(list);
+					ArrayList<byte[]> newList = new ArrayList<>(list);
 					newList.replaceAll(bytes -> Arrays.copyOf(bytes, bytes.length));
 					return newList;
 				});
@@ -309,18 +363,23 @@ public class TranslatorClientbound {
 		}
 	}
 
-
 	private static void sendChunkUpdate(Logger logger, final PacketContainer packet, final CoordinateOffset offset) {
-		if (packet.getChunkCoordIntPairs().size() > 0) {
-			var oldPair = packet.getChunkCoordIntPairs().read(0);
-			final ChunkCoordIntPair newCoords = new ChunkCoordIntPair(
-					oldPair.getChunkX() - offset.getXChunk(),
-					oldPair.getChunkZ() - offset.getZChunk()
-			);
-
-			packet.getChunkCoordIntPairs().write(0, newCoords);
-		} else {
-			logger.severe("Packet size error");
+		Object sp = packet.getModifier().read(0);
+		if (sp == null) {
+			return;
+		}
+		if (!SECTIONPOSITIONCLASS.isInstance(sp)) {
+			throw new RuntimeException("Wrong type");
+		}
+		try {
+			int sectionX = (int) SectionPositionGetChunkXMethod.invoke(sp) - offset.getXChunk();
+			int sectionY = (int) SectionPositionGetChunkYMethod.invoke(sp);
+			int sectionZ = (int) SectionPositionGetChunkZMethod.invoke(sp) - offset.getZChunk();
+			Object newSectionPosition = SectionPositionCreateMethod.invoke(null, sectionX, sectionY, sectionZ);
+			packet.getModifier().write(0, newSectionPosition);
+		} catch (IllegalAccessException | InvocationTargetException e) {
+			logger.severe(e.getLocalizedMessage());
+			e.printStackTrace();
 		}
 	}
 
@@ -340,7 +399,7 @@ public class TranslatorClientbound {
 
 		packet.getBlockPositionCollectionModifier().modify(0, lst -> {
 			if (lst == null) return null;
-			var newLst = new ArrayList<BlockPosition>(lst.size());
+			ArrayList<BlockPosition> newLst = new ArrayList<BlockPosition>(lst.size());
 			for (BlockPosition blockPosition : lst) {
 				newLst.add(blockPosition.subtract(new BlockPosition(offset.getXInt(), 0, offset.getZInt())));
 			}
