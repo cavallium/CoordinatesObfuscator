@@ -24,12 +24,12 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.CompassMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 
 public class TranslatorClientbound {
 
 	private static final String SERVER_VERSION;
+	public static final Class<?> COMPASSMETACLASS;
 	public static final Class<?> SECTIONPOSITIONCLASS;
 	public static final Method SectionPositionCreateMethod;
 	public static final Method SectionPositionGetChunkXMethod;
@@ -53,6 +53,13 @@ public class TranslatorClientbound {
 		} catch (ClassNotFoundException | NoSuchMethodException e) {
 			throw new RuntimeException(e);
 		}
+		Class<?> compassMetaClass;
+		try {
+			compassMetaClass = Class.forName("org.bukkit.inventory.meta.CompassMeta");
+		} catch (ClassNotFoundException | NoClassDefFoundError ex) {
+			compassMetaClass = null;
+		}
+		COMPASSMETACLASS = compassMetaClass;
 
 		try {
 			Field modifiersField = Field.class.getDeclaredField("modifiers");
@@ -286,13 +293,16 @@ public class TranslatorClientbound {
 		if (itemStack.hasItemMeta()) {
 			ItemMeta itemMeta = itemStack.getItemMeta();
 
-			if (itemMeta instanceof CompassMeta) {
-				CompassMeta compassMeta = (CompassMeta) itemMeta;
-				Location lodestoneLocation = compassMeta.getLodestone();
-				if (lodestoneLocation != null) {
-					compassMeta.setLodestone(lodestoneLocation.subtract(offset.getXInt(), 0, offset.getZInt()));
-					if (!itemStack.setItemMeta(compassMeta)) {
-						logger.severe("Can't apply meta");
+			// Before 1.16.1
+			if (COMPASSMETACLASS != null) {
+				if (itemMeta instanceof org.bukkit.inventory.meta.CompassMeta) {
+					org.bukkit.inventory.meta.CompassMeta compassMeta = (org.bukkit.inventory.meta.CompassMeta) itemMeta;
+					Location lodestoneLocation = compassMeta.getLodestone();
+					if (lodestoneLocation != null) {
+						compassMeta.setLodestone(lodestoneLocation.subtract(offset.getXInt(), 0, offset.getZInt()));
+						if (!itemStack.setItemMeta(compassMeta)) {
+							logger.severe("Can't apply meta");
+						}
 					}
 				}
 			}
