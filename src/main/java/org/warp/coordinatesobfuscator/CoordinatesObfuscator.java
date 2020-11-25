@@ -59,7 +59,7 @@ public class CoordinatesObfuscator extends JavaPlugin implements Listener {
 			final PacketAdapter.AdapterParameteters paramsServer = PacketAdapter.params();
 			paramsServer.plugin(this);
 			paramsServer.connectionSide(ConnectionSide.SERVER_SIDE);
-			paramsServer.listenerPriority(ListenerPriority.HIGHEST);
+			paramsServer.listenerPriority(ListenerPriority.LOWEST);
 			paramsServer.gamePhase(GamePhase.PLAYING);
 
 			packets.add(PacketType.Play.Server.BLOCK_ACTION);
@@ -137,7 +137,7 @@ public class CoordinatesObfuscator extends JavaPlugin implements Listener {
 			final PacketAdapter.AdapterParameteters paramsClient = PacketAdapter.params();
 			paramsClient.plugin(this);
 			paramsClient.connectionSide(ConnectionSide.CLIENT_SIDE);
-			paramsClient.listenerPriority(ListenerPriority.HIGHEST);
+			paramsClient.listenerPriority(ListenerPriority.LOWEST);
 			paramsClient.gamePhase(GamePhase.PLAYING);
 
 			packets.clear();
