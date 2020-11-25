@@ -70,16 +70,13 @@ public class TranslatorServerbound {
 				recvPosition(logger, packet, offset);
 				break;
 			case "BLOCK_PLACE":
-				if (Client.BLOCK_PLACE.getCurrentId() == 0x2D) {
-					recvMovingPosition(logger, packet, offset);
-				}
 				break;
-			case "USE_ITEM": // This is Block Place, not Use_Item. It's a naming bug
-				if (Client.USE_ITEM.getCurrentId() == 0x2D) {
-					recvMovingPosition(logger, packet, offset);
-				}
+			case "USE_ITEM":
+				recvMovingPosition(logger, packet, offset);
 				break;
 			case "USE_ENTITY":
+				break;
+			default:
 				break;
 		}
 	}
@@ -89,7 +86,8 @@ public class TranslatorServerbound {
 			packet.getDoubles().modify(0, x -> x == null ? null : x + offset.getX());
 			packet.getDoubles().modify(2, z -> z == null ? null : z + offset.getZ());
 		} else {
-			logger.severe("Packet size error");
+			int size = packet.getDoubles().size();
+			logger.severe("Packet size error: " + size);
 		}
 	}
 

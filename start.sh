@@ -1,6 +1,6 @@
 WORKSPACE=".papermc"
-MC_VERSION="1.16.2"
-PAPER_BUILD="1"
+MC_VERSION="1.16.4"
+PAPER_BUILD="latest"
 
 ## ============== DO NOT EDIT THE SCRIPT BELOW UNLESS YOU KNOW WHAT YOU ARE DOING ============== ##
 

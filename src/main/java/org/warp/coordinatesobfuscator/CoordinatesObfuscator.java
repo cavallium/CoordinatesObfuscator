@@ -4,6 +4,7 @@ import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.PacketType.Play;
 import com.comphenix.protocol.PacketType.Play.Client;
 import com.comphenix.protocol.PacketType.Play.Server;
+import com.comphenix.protocol.ProtocolLib;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
 import com.comphenix.protocol.events.ConnectionSide;
@@ -144,11 +145,8 @@ public class CoordinatesObfuscator extends JavaPlugin implements Listener {
 			packets.add(PacketType.Play.Client.POSITION);
 			packets.add(PacketType.Play.Client.POSITION_LOOK);
 			packets.add(PacketType.Play.Client.BLOCK_DIG);
-			if (Client.BLOCK_PLACE.getCurrentId() == 0x2D) {
-				packets.add(PacketType.Play.Client.BLOCK_PLACE);
-			} else if (Client.USE_ITEM.getCurrentId() == 0x2D) {
-				packets.add(PacketType.Play.Client.USE_ITEM); // This is Block Place, not Use_Item. It's a naming bug
-			}
+			packets.add(PacketType.Play.Client.BLOCK_PLACE);
+			packets.add(PacketType.Play.Client.USE_ITEM);
 			packets.add(PacketType.Play.Client.USE_ENTITY);
 			packets.add(PacketType.Play.Client.VEHICLE_MOVE);
 			packets.add(PacketType.Play.Client.SET_COMMAND_BLOCK);
@@ -167,6 +165,7 @@ public class CoordinatesObfuscator extends JavaPlugin implements Listener {
 						TranslatorServerbound.incoming(logger, event.getPacket(), event.getPlayer());
 					} catch (final UnsupportedOperationException e) {
 						event.setCancelled(true);
+						e.printStackTrace();
 						Bukkit.getServer().broadcastMessage("Failed: " + event.getPacket().getType().name());
 					}
 				}

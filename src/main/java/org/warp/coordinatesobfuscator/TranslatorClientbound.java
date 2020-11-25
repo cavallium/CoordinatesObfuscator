@@ -35,7 +35,7 @@ public class TranslatorClientbound {
 	public static final Method SectionPositionGetChunkXMethod;
 	public static final Method SectionPositionGetChunkYMethod;
 	public static final Method SectionPositionGetChunkZMethod;
-	private static final boolean USE_1_16_R2;
+	private static final boolean USE_1_16_R2_OR_GREATER;
 
 	static {
 		// This gets the server version.
@@ -43,7 +43,11 @@ public class TranslatorClientbound {
 		name = name.substring(name.indexOf("craftbukkit.") + "craftbukkit.".length());
 		name = name.substring(0, name.indexOf("."));
 		SERVER_VERSION = name;
-		USE_1_16_R2 = SERVER_VERSION.equals("v1_16_R2");
+		USE_1_16_R2_OR_GREATER =
+				SERVER_VERSION.startsWith("v1_16_R2") || SERVER_VERSION.startsWith("v1_16_R3") || SERVER_VERSION.startsWith(
+						"v1_16_R4") || SERVER_VERSION.startsWith("v1_16_R5") || SERVER_VERSION.startsWith("v1_16_R6")
+						|| SERVER_VERSION.startsWith("v1_17") || SERVER_VERSION.startsWith("v1_18") || SERVER_VERSION.startsWith(
+						"v1_19");
 		try {
 			SECTIONPOSITIONCLASS = Class.forName("net.minecraft.server." + SERVER_VERSION + ".SectionPosition");
 			SectionPositionCreateMethod = SECTIONPOSITIONCLASS.getDeclaredMethod("a", int.class, int.class, int.class);
@@ -376,7 +380,7 @@ public class TranslatorClientbound {
 	}
 
 	private static void sendChunkUpdate(Logger logger, final PacketContainer packet, final CoordinateOffset offset) {
-		if (USE_1_16_R2) {
+		if (USE_1_16_R2_OR_GREATER) {
 			Object sp = packet.getModifier().read(0);
 			if (sp == null) {
 				return;
