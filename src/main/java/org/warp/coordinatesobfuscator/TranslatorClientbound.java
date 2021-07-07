@@ -78,6 +78,7 @@ public class TranslatorClientbound {
 				logger.fine("[out]Respawning player");
 				respawn(logger, offset, player);
 				break;
+			case "POSITION_LOOK":
 			case "POSITION":
 				boolean isRelativeX = false;
 				boolean isRelativeZ = false;
