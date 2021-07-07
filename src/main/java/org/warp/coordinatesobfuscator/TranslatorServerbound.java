@@ -11,46 +11,15 @@ import java.util.Objects;
 import java.util.logging.Logger;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
+import org.bukkit.util.Vector;
 
 public class TranslatorServerbound {
 
-	private static final String SERVER_VERSION;
-
-	public static final Class<?> VEC3DCLASS;
-	public static final Class<?> ENUMDIRECTIONCLASS;
-	public static final Class<?> BLOCKPOSITIONCLASS;
-	public static final Class<?> MOVINGOBJECTPOSITIONBLOCKCLASS;
-	public static final Method MovingObjectPositionBlockGetBlockPositionMethod;
-	public static final Method MovingObjectPositionBlockGetDirectionMethod;
-	public static final Method MovingObjectPositionBlockGetPosMethod;
-	public static final Method MovingObjectPositionBlockStaticConstructor;
-	public static final Method Vec3DaddMethod;
-	public static final Method BlockPositionAddMethod;
-
-	static {
-		// This gets the server version.
-		String name = Bukkit.getServer().getClass().getName();
-		name = name.substring(name.indexOf("craftbukkit.") + "craftbukkit.".length());
-		name = name.substring(0, name.indexOf("."));
-		SERVER_VERSION = name;
-		try {
-			VEC3DCLASS = Class.forName("net.minecraft.server." + SERVER_VERSION + ".Vec3D");
-			ENUMDIRECTIONCLASS = Class.forName("net.minecraft.server." + SERVER_VERSION + ".EnumDirection");
-			BLOCKPOSITIONCLASS = Class.forName("net.minecraft.server." + SERVER_VERSION + ".BlockPosition");
-			MOVINGOBJECTPOSITIONBLOCKCLASS = Class.forName("net.minecraft.server." + SERVER_VERSION + ".MovingObjectPositionBlock");
-			MovingObjectPositionBlockGetBlockPositionMethod = MOVINGOBJECTPOSITIONBLOCKCLASS.getDeclaredMethod("getBlockPosition");
-			MovingObjectPositionBlockGetDirectionMethod = MOVINGOBJECTPOSITIONBLOCKCLASS.getMethod("getDirection");
-			MovingObjectPositionBlockGetPosMethod = MOVINGOBJECTPOSITIONBLOCKCLASS.getMethod("getPos");
-			MovingObjectPositionBlockStaticConstructor = MOVINGOBJECTPOSITIONBLOCKCLASS.getMethod("a", VEC3DCLASS, ENUMDIRECTIONCLASS, BLOCKPOSITIONCLASS);
-			Vec3DaddMethod = VEC3DCLASS.getMethod("add", double.class, double.class, double.class);
-			BlockPositionAddMethod = BLOCKPOSITIONCLASS.getMethod("a", double.class, double.class, double.class);
-		} catch (ClassNotFoundException | NoSuchMethodException e) {
-			throw new RuntimeException(e);
-		}
-	}
+	private static final String USE_ITEM = "BLOCK_PLACE";
+	private static final String BLOCK_PLACE = "USE_ITEM";
 
 	public static void incoming(Logger logger, final PacketContainer packet, final Player player) {
-		if (player instanceof TemporaryPlayer) {
+		if (player == null || player instanceof TemporaryPlayer) {
 			return;
 		}
 		CoordinateOffset offset = PlayerManager.getOffsetOrJoinPlayer(player, player.getWorld());
@@ -67,11 +36,11 @@ public class TranslatorServerbound {
 			case "SET_COMMAND_BLOCK":
 			case "UPDATE_SIGN":
 			case "BLOCK_DIG":
-				recvPosition(logger, packet, offset);
+ 				recvPosition(logger, packet, offset);
 				break;
-			case "BLOCK_PLACE":
+			case USE_ITEM:
 				break;
-			case "USE_ITEM":
+			case BLOCK_PLACE:
 				recvMovingPosition(logger, packet, offset);
 				break;
 			case "USE_ENTITY":
@@ -115,27 +84,12 @@ public class TranslatorServerbound {
 	}
 
 	private static void recvMovingPosition(Logger logger, final PacketContainer packet, final CoordinateOffset offset) {
-		Object mopb = packet.getModifier().read(0);
+		var mopb = packet.getMovingBlockPositions().read(0);
 		if (mopb == null) {
 			return;
 		}
-		if (!MOVINGOBJECTPOSITIONBLOCKCLASS.isInstance(mopb)) {
-			throw new RuntimeException("Wrong type");
-		}
-		try {
-			Object blockPosition = MovingObjectPositionBlockGetBlockPositionMethod.invoke(mopb);
-			Object direction = MovingObjectPositionBlockGetDirectionMethod.invoke(mopb);
-			Object vec3d = MovingObjectPositionBlockGetPosMethod.invoke(mopb);
-
-			Object newVec3d = Vec3DaddMethod.invoke(vec3d, offset.getX(), 0, offset.getZ());
-
-			Object newBlockPosition = BlockPositionAddMethod.invoke(blockPosition, offset.getX(), 0, offset.getZ());
-
-			Object result = MovingObjectPositionBlockStaticConstructor.invoke(null, newVec3d, direction, newBlockPosition);
-			packet.getModifier().write(0, result);
-		} catch (IllegalAccessException | InvocationTargetException e) {
-			logger.severe(e.getLocalizedMessage());
-			e.printStackTrace();
-		}
+		mopb.setBlockPosition(mopb.getBlockPosition().add(new BlockPosition(offset.getXInt(), 0, offset.getZInt())));
+		mopb.setPosVector(mopb.getPosVector().add(new Vector(offset.getX(), 0, offset.getZ())));
+		packet.getMovingBlockPositions().write(0, mopb);
 	}
 }

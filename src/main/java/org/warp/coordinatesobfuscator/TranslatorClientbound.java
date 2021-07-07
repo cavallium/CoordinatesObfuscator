@@ -4,15 +4,12 @@ import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.injector.server.TemporaryPlayer;
 import com.comphenix.protocol.reflect.StructureModifier;
 import com.comphenix.protocol.wrappers.BlockPosition;
-import com.comphenix.protocol.wrappers.ChunkCoordIntPair;
 import com.comphenix.protocol.wrappers.Converters;
 import com.comphenix.protocol.wrappers.WrappedWatchableObject;
 import com.comphenix.protocol.wrappers.nbt.NbtBase;
 import com.comphenix.protocol.wrappers.nbt.NbtCompound;
-import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -20,7 +17,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Logger;
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -28,76 +24,27 @@ import org.bukkit.inventory.meta.ItemMeta;
 
 public class TranslatorClientbound {
 
-	private static final String SERVER_VERSION;
-	public static final Class<?> COMPASSMETACLASS;
-	public static final Class<?> SECTIONPOSITIONCLASS;
-	public static final Method SectionPositionCreateMethod;
-	public static final Method SectionPositionGetChunkXMethod;
-	public static final Method SectionPositionGetChunkYMethod;
-	public static final Method SectionPositionGetChunkZMethod;
-	private static final boolean USE_1_16_R2_OR_GREATER;
+	private static final Class<?> NMS_BLOCK_POSITION_CLASS;
+	private static final Method NMS_BLOCK_POSITION_ADD_CLASS;
 
 	static {
-		// This gets the server version.
-		String name = Bukkit.getServer().getClass().getName();
-		name = name.substring(name.indexOf("craftbukkit.") + "craftbukkit.".length());
-		name = name.substring(0, name.indexOf("."));
-		SERVER_VERSION = name;
-		USE_1_16_R2_OR_GREATER =
-				SERVER_VERSION.startsWith("v1_16_R2") || SERVER_VERSION.startsWith("v1_16_R3") || SERVER_VERSION.startsWith(
-						"v1_16_R4") || SERVER_VERSION.startsWith("v1_16_R5") || SERVER_VERSION.startsWith("v1_16_R6")
-						|| SERVER_VERSION.startsWith("v1_17") || SERVER_VERSION.startsWith("v1_18") || SERVER_VERSION.startsWith(
-						"v1_19");
+		Class<?> blockPositionClass = null;
 		try {
-			SECTIONPOSITIONCLASS = Class.forName("net.minecraft.server." + SERVER_VERSION + ".SectionPosition");
-			SectionPositionCreateMethod = SECTIONPOSITIONCLASS.getDeclaredMethod("a", int.class, int.class, int.class);
-			SectionPositionGetChunkXMethod = SECTIONPOSITIONCLASS.getDeclaredMethod("a");
-			SectionPositionGetChunkYMethod = SECTIONPOSITIONCLASS.getDeclaredMethod("b");
-			SectionPositionGetChunkZMethod = SECTIONPOSITIONCLASS.getDeclaredMethod("c");
-		} catch (ClassNotFoundException | NoSuchMethodException e) {
-			throw new RuntimeException(e);
+			blockPositionClass = Class.forName("net.minecraft.core.BlockPosition");
+		} catch (ClassNotFoundException e) {
+			e.printStackTrace();
 		}
-		Class<?> compassMetaClass;
-		try {
-			compassMetaClass = Class.forName("org.bukkit.inventory.meta.CompassMeta");
-		} catch (ClassNotFoundException | NoClassDefFoundError ex) {
-			compassMetaClass = null;
-		}
-		COMPASSMETACLASS = compassMetaClass;
+		NMS_BLOCK_POSITION_CLASS = blockPositionClass;
 
+		Method blockPositionAddMethod = null;
 		try {
-			Field modifiersField = Field.class.getDeclaredField("modifiers");
-			modifiersField.setAccessible(true);
-
-			Class<?> BLOCKCLASS = Class.forName("net.minecraft.server." + SERVER_VERSION + ".Block");
-			Method BlockNewVoxelShapeMethod = BLOCKCLASS.getDeclaredMethod("a", double.class, double.class, double.class, double.class, double.class, double.class);
-			Class<?> BLOCKBAMBOOCLASS = Class.forName("net.minecraft.server." + SERVER_VERSION + ".BlockBamboo");
-			Field blockBambooBoundingBoxA = BLOCKBAMBOOCLASS.getDeclaredField("a");
-			blockBambooBoundingBoxA.setAccessible(true);
-			modifiersField.setInt(blockBambooBoundingBoxA, blockBambooBoundingBoxA.getModifiers() & ~Modifier.FINAL);
-			blockBambooBoundingBoxA.set(null, BlockNewVoxelShapeMethod.invoke(null, 0.0D, 0.0D, 0.0D, 0.0D, 0.0D, 0.0D));
-			Field blockBambooBoundingBoxB = BLOCKBAMBOOCLASS.getDeclaredField("b");
-			blockBambooBoundingBoxB.setAccessible(true);
-			modifiersField.setInt(blockBambooBoundingBoxB, blockBambooBoundingBoxB.getModifiers() & ~Modifier.FINAL);
-			blockBambooBoundingBoxB.set(null, BlockNewVoxelShapeMethod.invoke(null, 0.0D, 0.0D, 0.0D, 0.0D, 0.0D, 0.0D));
-			Field blockBambooBoundingBoxC = BLOCKBAMBOOCLASS.getDeclaredField("c");
-			blockBambooBoundingBoxC.setAccessible(true);
-			modifiersField.setInt(blockBambooBoundingBoxC, blockBambooBoundingBoxC.getModifiers() & ~Modifier.FINAL);
-			blockBambooBoundingBoxC.set(null, BlockNewVoxelShapeMethod.invoke(null, 0.0D, 0.0D, 0.0D, 0.0D, 0.0D, 0.0D));
-		} catch (ClassNotFoundException | NoSuchMethodException | NoSuchFieldException | IllegalAccessException | InvocationTargetException ex) {
-			System.err.println("Can't disable bamboo bounding boxes. Please use Java 8. " + ex.getLocalizedMessage());
+			blockPositionAddMethod = blockPositionClass.getDeclaredMethod("c", int.class, int.class, int.class);
+		} catch (NoSuchMethodException e) {
+			e.printStackTrace();
 		}
+		NMS_BLOCK_POSITION_ADD_CLASS = blockPositionAddMethod;
 	}
 
-
-	/**ENTITY_METADATA
-	 *
-	 *
-	 * @param logger
-	 * @param packet
-	 * @param player
-	 * @return true to cancel
-	 */
 	public static boolean outgoing(Logger logger, final PacketContainer packet, final Player player) {
 		if (player instanceof TemporaryPlayer) {
 			return false;
@@ -123,6 +70,9 @@ public class TranslatorClientbound {
 			case "SPAWN_ENTITY_PAINTING":
 			case "OPEN_SIGN_EDITOR":
 				sendBlockPosition(logger, packet, offset);
+				break;
+			case "ADD_VIBRATION_SIGNAL":
+				fixVibrationSignal(logger, packet, offset);
 				break;
 			case "RESPAWN":
 				logger.fine("[out]Respawning player");
@@ -221,10 +171,12 @@ public class TranslatorClientbound {
 								Optional opt = (Optional) oldValue;
 								if (opt.isPresent()) {
 									Object val = opt.get();
-									if (TranslatorServerbound.BLOCKPOSITIONCLASS.isInstance(val)) {
+									if (NMS_BLOCK_POSITION_CLASS.isInstance(val)) {
 										wrappedWatchableObject.setValue(Optional.of(offsetPositionMc(logger, offset, val)));
 									}
 								}
+							} else if (oldValue instanceof BlockPosition blockPosition) {
+								wrappedWatchableObject.setValue(offsetPosition(logger, offset, blockPosition));
 							}
 							result.add(wrappedWatchableObject);
 						}
@@ -297,16 +249,13 @@ public class TranslatorClientbound {
 		if (itemStack.hasItemMeta()) {
 			ItemMeta itemMeta = itemStack.getItemMeta();
 
-			// Before 1.16.1
-			if (COMPASSMETACLASS != null) {
-				if (itemMeta instanceof org.bukkit.inventory.meta.CompassMeta) {
-					org.bukkit.inventory.meta.CompassMeta compassMeta = (org.bukkit.inventory.meta.CompassMeta) itemMeta;
-					Location lodestoneLocation = compassMeta.getLodestone();
-					if (lodestoneLocation != null) {
-						compassMeta.setLodestone(lodestoneLocation.subtract(offset.getXInt(), 0, offset.getZInt()));
-						if (!itemStack.setItemMeta(compassMeta)) {
-							logger.severe("Can't apply meta");
-						}
+			if (itemMeta instanceof org.bukkit.inventory.meta.CompassMeta) {
+				org.bukkit.inventory.meta.CompassMeta compassMeta = (org.bukkit.inventory.meta.CompassMeta) itemMeta;
+				Location lodestoneLocation = compassMeta.getLodestone();
+				if (lodestoneLocation != null) {
+					compassMeta.setLodestone(lodestoneLocation.subtract(offset.getXInt(), 0, offset.getZInt()));
+					if (!itemStack.setItemMeta(compassMeta)) {
+						logger.severe("Can't apply meta");
 					}
 				}
 			}
@@ -380,37 +329,11 @@ public class TranslatorClientbound {
 	}
 
 	private static void sendChunkUpdate(Logger logger, final PacketContainer packet, final CoordinateOffset offset) {
-		if (USE_1_16_R2_OR_GREATER) {
-			Object sp = packet.getModifier().read(0);
-			if (sp == null) {
-				return;
-			}
-			if (!SECTIONPOSITIONCLASS.isInstance(sp)) {
-				throw new RuntimeException("Wrong type");
-			}
-			try {
-				int sectionX = (int) SectionPositionGetChunkXMethod.invoke(sp) - offset.getXChunk();
-				int sectionY = (int) SectionPositionGetChunkYMethod.invoke(sp);
-				int sectionZ = (int) SectionPositionGetChunkZMethod.invoke(sp) - offset.getZChunk();
-				Object newSectionPosition = SectionPositionCreateMethod.invoke(null, sectionX, sectionY, sectionZ);
-				packet.getModifier().write(0, newSectionPosition);
-			} catch (IllegalAccessException | InvocationTargetException e) {
-				logger.severe(e.getLocalizedMessage());
-				e.printStackTrace();
-			}
-		} else {
-			if (packet.getChunkCoordIntPairs().size() > 0) {
-				ChunkCoordIntPair oldPair = packet.getChunkCoordIntPairs().read(0);
-				final ChunkCoordIntPair newCoords = new ChunkCoordIntPair(
-						oldPair.getChunkX() - offset.getXChunk(),
-						oldPair.getChunkZ() - offset.getZChunk()
-				);
-
-				packet.getChunkCoordIntPairs().write(0, newCoords);
-			} else {
-				logger.severe("Packet size error");
-			}
+		BlockPosition sp = packet.getSectionPositions().read(0);
+		if (sp == null) {
+			return;
 		}
+		packet.getSectionPositions().write(0, sp.subtract(new BlockPosition(offset.getXChunk(), 0, offset.getZChunk())));
 	}
 
 
@@ -484,6 +407,19 @@ public class TranslatorClientbound {
 		}
 	}
 
+	private static void fixVibrationSignal(Logger logger, final PacketContainer packet, final CoordinateOffset offset) {
+		if (packet.getBlockPositionModifier().size() >= 1) {
+			packet.getBlockPositionModifier().modify(0, pos -> offsetPosition(logger, offset, pos));
+		}	else {
+			logger.severe("Packet size error");
+		}
+		if (packet.getBlockPositionModifier().size() >= 2) {
+			packet.getBlockPositionModifier().modify(1, pos -> offsetPosition(logger, offset, pos));
+		}	else {
+			logger.severe("Packet size error");
+		}
+	}
+
 	private static BlockPosition offsetPosition(Logger logger, CoordinateOffset offset, BlockPosition pos) {
 		if (pos == null) return null;
 		return pos.subtract(new BlockPosition(offset.getXInt(), 0, offset.getZInt()));
@@ -492,7 +428,7 @@ public class TranslatorClientbound {
 	private static Object offsetPositionMc(Logger logger, CoordinateOffset offset, Object pos) {
 		if (pos == null) return null;
 		try {
-			return TranslatorServerbound.BlockPositionAddMethod.invoke(pos, -offset.getX(), -0d, -offset.getZ());
+			return NMS_BLOCK_POSITION_ADD_CLASS.invoke(pos, -offset.getXInt(), -0, -offset.getZInt());
 		} catch (IllegalAccessException | InvocationTargetException e) {
 			throw new RuntimeException(e);
 		}

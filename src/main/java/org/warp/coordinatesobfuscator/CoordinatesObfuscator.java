@@ -59,7 +59,7 @@ public class CoordinatesObfuscator extends JavaPlugin implements Listener {
 			final PacketAdapter.AdapterParameteters paramsServer = PacketAdapter.params();
 			paramsServer.plugin(this);
 			paramsServer.connectionSide(ConnectionSide.SERVER_SIDE);
-			paramsServer.listenerPriority(ListenerPriority.LOWEST);
+			paramsServer.listenerPriority(ListenerPriority.HIGHEST);
 			paramsServer.gamePhase(GamePhase.PLAYING);
 
 			packets.add(PacketType.Play.Server.BLOCK_ACTION);
@@ -82,16 +82,15 @@ public class CoordinatesObfuscator extends JavaPlugin implements Listener {
 			packets.add(PacketType.Play.Server.NAMED_SOUND_EFFECT);
 
 			packets.add(PacketType.Play.Server.NAMED_ENTITY_SPAWN);
-			packets.add(PacketType.Play.Server.SPAWN_ENTITY_WEATHER);
 			packets.add(PacketType.Play.Server.SPAWN_ENTITY);
 			packets.add(PacketType.Play.Server.SPAWN_ENTITY_LIVING);
 			packets.add(PacketType.Play.Server.SPAWN_ENTITY_EXPERIENCE_ORB);
 			packets.add(PacketType.Play.Server.SPAWN_ENTITY_PAINTING);
 			packets.add(PacketType.Play.Server.ENTITY_TELEPORT);
 
-			packets.add(PacketType.Play.Server.UPDATE_SIGN);
+			packets.add(PacketType.Play.Server.OPEN_SIGN_EDITOR);
+			packets.add(PacketType.Play.Server.ADD_VIBRATION_SIGNAL);
 
-			packets.add(PacketType.Play.Server.OPEN_SIGN_ENTITY);
 			packets.add(PacketType.Play.Server.ENTITY_METADATA);
 			packets.add(PacketType.Play.Server.VIEW_CENTRE);
 			packets.add(PacketType.Play.Server.WINDOW_ITEMS);
@@ -166,7 +165,9 @@ public class CoordinatesObfuscator extends JavaPlugin implements Listener {
 					} catch (final UnsupportedOperationException e) {
 						event.setCancelled(true);
 						e.printStackTrace();
-						Bukkit.getServer().broadcastMessage("Failed: " + event.getPacket().getType().name());
+						if (event.getPlayer() != null) {
+							Bukkit.getServer().broadcastMessage("Failed: " + event.getPacket().getType().name());
+						}
 					}
 				}
 			});
