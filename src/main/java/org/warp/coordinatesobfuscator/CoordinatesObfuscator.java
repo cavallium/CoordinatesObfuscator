@@ -43,6 +43,7 @@ public class CoordinatesObfuscator extends JavaPlugin implements Listener {
 	}
 
 
+	@SuppressWarnings("CommentedOutCode")
 	@Override
 	public void onEnable() {
 		this.logger = getLogger();
@@ -97,22 +98,35 @@ public class CoordinatesObfuscator extends JavaPlugin implements Listener {
 			packets.add(PacketType.Play.Server.WINDOW_DATA);
 			packets.add(PacketType.Play.Server.SET_SLOT);
 
+			packets.add(Server.TILE_ENTITY_DATA);
+			
+			//todo: these packets shouldn't have position. Check if some of them must be translated
+			// packets.add(Server.ENTITY_DESTROY);
+			// packets.add(Server.ENTITY_EQUIPMENT);
+			// packets.add(Server.ENTITY_LOOK);
+			// packets.add(Server.ENTITY_EFFECT);
+			// packets.add(Server.ENTITY_HEAD_ROTATION);
+			// packets.add(Server.ENTITY_SOUND);
+			// packets.add(Server.ENTITY_STATUS);
+			// packets.add(Server.ENTITY_VELOCITY);
+			// packets.add(Server.REL_ENTITY_MOVE);
+			// packets.add(Server.REL_ENTITY_MOVE_LOOK);
+			// packets.add(Server.ATTACH_ENTITY);
+
 			paramsServer.types(packets);
 
 			pm.addPacketListener(new PacketAdapter(paramsServer) {
+				@SuppressWarnings("DuplicateBranchesInSwitch")
 				@Override
 				public void onPacketSending(final PacketEvent event) {
 
 					PacketContainer packet;
 
-					packet = event.getPacket().shallowClone();
-					switch (packet.getType().name()) {
-						case "TILE_ENTITY_DATA":
-							cloneTileEntityData(packet);
-							break;
-						case "MAP_CHUNK":
-							cloneMapChunkEntitiesData(packet);
-							break;
+					switch (event.getPacket().getType().name()) {
+						case "LIGHT_UPDATE" -> packet = event.getPacket().shallowClone();
+						case "TILE_ENTITY_DATA" -> packet = cloneTileEntityData(event.getPacket());
+						case "MAP_CHUNK" -> packet = cloneMapChunkEntitiesData(event.getPacket());
+						default -> packet = event.getPacket().shallowClone();
 					}
 
 					Player player = event.getPlayer();
@@ -187,7 +201,8 @@ public class CoordinatesObfuscator extends JavaPlugin implements Listener {
 	}
 
 
-	private PacketContainer cloneTileEntityData(final PacketContainer packet) {
+	private PacketContainer cloneTileEntityData(PacketContainer packet) {
+		packet = packet.shallowClone();
 		int i = 0;
 		for (final NbtBase<?> obj : packet.getNbtModifier().getValues()) {
 			packet.getNbtModifier().write(i, obj.deepClone());
@@ -198,6 +213,7 @@ public class CoordinatesObfuscator extends JavaPlugin implements Listener {
 	}
 
 	private PacketContainer cloneMapChunkEntitiesData(PacketContainer packet) {
+		packet = packet.shallowClone();
 		int i = 0;
 		for (final List<NbtBase<?>> obj : packet.getListNbtModifier().getValues()) {
 			ArrayList<NbtBase<?>> newList = new ArrayList<NbtBase<?>>(obj.size());
