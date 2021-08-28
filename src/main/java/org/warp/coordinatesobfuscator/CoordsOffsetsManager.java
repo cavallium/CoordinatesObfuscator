@@ -4,11 +4,17 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Supplier;
+import java.util.logging.Logger;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 
 public class CoordsOffsetsManager {
 	private final Map<UUID, HashMap<UUID, CoordinateOffset>> playerCoordsPerWorld = new HashMap<>();
+	private final Logger pluginLogger;
+
+	public CoordsOffsetsManager(Logger pluginLogger) {
+		this.pluginLogger = pluginLogger;
+	}
 
 	public synchronized CoordinateOffset get(Player player, World world) {
 		return get(player.getUniqueId(), world.getUID());
@@ -70,7 +76,7 @@ public class CoordsOffsetsManager {
 	}
 
 	private void removeValue(UUID playerUUID, UUID worldUUID) {
-		System.out.println("Deleting player coordinates offset");
+		pluginLogger.info("Deleting player coordinates offset");
 		HashMap<UUID, CoordinateOffset> worldsMap = playerCoordsPerWorld.get(playerUUID);
 		if (worldsMap != null) {
 			CoordinateOffset playerPosition = worldsMap.remove(worldUUID);
@@ -87,7 +93,7 @@ public class CoordsOffsetsManager {
 	}
 
 	private void removeValue(UUID playerUUID) {
-		System.out.println("Deleting player coordinates offset (globally)");
+		pluginLogger.info("Deleting player coordinates offset (globally)");
 		HashMap<UUID, CoordinateOffset> worldsMap = playerCoordsPerWorld.remove(playerUUID);
 		if (worldsMap == null) {
 			if (CoordinatesObfuscator.DISALLOW_REMOVING_NONEXISTENT_COORDINATES) {
@@ -97,7 +103,7 @@ public class CoordsOffsetsManager {
 	}
 
 	private void setValue(UUID playerUUID, UUID worldUUID, CoordinateOffset value) {
-		System.out.println("Setting player coordinates offset");
+		pluginLogger.info("Setting player coordinates offset");
 		value.validate();
 		HashMap<UUID, CoordinateOffset> worldsMap = playerCoordsPerWorld.computeIfAbsent(playerUUID, (playerUid) -> new HashMap<>());
 		if (worldsMap.containsKey(worldUUID)) {
@@ -108,7 +114,7 @@ public class CoordsOffsetsManager {
 	}
 
 	private void replaceValue(UUID playerUUID, UUID worldUUID, CoordinateOffset value) {
-		System.out.println("Replacing player coordinates offset");
+		pluginLogger.info("Replacing player coordinates offset");
 		value.validate();
 		HashMap<UUID, CoordinateOffset> worldsMap = playerCoordsPerWorld.computeIfAbsent(playerUUID, (playerUid) -> new HashMap<>());
 		if (!worldsMap.containsKey(worldUUID)) {

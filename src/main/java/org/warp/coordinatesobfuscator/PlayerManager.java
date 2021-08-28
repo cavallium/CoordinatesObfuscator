@@ -73,7 +73,7 @@ public class PlayerManager {
 
 	public static void load(Logger pluginLogger) {
 		logger = pluginLogger;
-		coordsOffsetsManager = new CoordsOffsetsManager();
+		coordsOffsetsManager = new CoordsOffsetsManager(pluginLogger);
 		lastPlayerCoordinateManager = new LastPlayerCoordinateManager();
 	}
 
