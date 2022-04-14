@@ -145,9 +145,6 @@ public class CoordsOffsetsManager {
 			return null;
 		}
 		CoordinateOffset offset = worldsMap.get(worldUUID);
-		if (offset == null) {
-			return null;
-		}
 		return offset;
 	}
 }

@@ -38,11 +38,11 @@ public final class CoordinateOffset {
 		if ((int) (Math.round(z / 16f) * 16) != z) {
 			throw new IllegalArgumentException("z is not aligned with the chunks!");
 		}
-		double reconvertedX = (double) ((int) x);
+		double reconvertedX = (int) x;
 		if (reconvertedX != x) {
 			throw new IllegalArgumentException("x is not safe to convert between double and int");
 		}
-		double reconvertedZ = (double) ((int) z);
+		double reconvertedZ = (int) z;
 		if (reconvertedZ != z) {
 			throw new IllegalArgumentException("z is not safe to convert between double and int");
 		}
@@ -151,10 +151,7 @@ public final class CoordinateOffset {
 		if (Double.compare(this.getX(), other.getX()) != 0) {
 			return false;
 		}
-		if (Double.compare(this.getZ(), other.getZ()) != 0) {
-			return false;
-		}
-		return true;
+		return Double.compare(this.getZ(), other.getZ()) == 0;
 	}
 
 	public int hashCode() {
