@@ -1,6 +1,6 @@
 package org.warp.coordinatesobfuscator;
 
-import com.comphenix.protocol.injector.temporary.TemporaryPlayer;
+import com.comphenix.protocol.injector.server.TemporaryPlayer;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Player;

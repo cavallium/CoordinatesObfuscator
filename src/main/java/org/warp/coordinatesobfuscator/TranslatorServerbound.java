@@ -1,7 +1,7 @@
 package org.warp.coordinatesobfuscator;
 
 import com.comphenix.protocol.events.PacketContainer;
-import com.comphenix.protocol.injector.temporary.TemporaryPlayer;
+import com.comphenix.protocol.injector.server.TemporaryPlayer;
 import com.comphenix.protocol.wrappers.BlockPosition;
 import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
