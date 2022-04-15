@@ -3,4 +3,4 @@ main: ${project.groupId}.coordinatesobfuscator.CoordinatesObfuscator
 version: ${project.version}
 api-version: 1.17
 author: Cavallium
-depend: [ProtocolLib]
+depend: [ ProtocolLib ]
