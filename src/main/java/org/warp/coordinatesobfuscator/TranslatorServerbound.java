@@ -1,17 +1,13 @@
 package org.warp.coordinatesobfuscator;
 
-import com.comphenix.protocol.PacketType;
-import com.comphenix.protocol.PacketType.Play.Client;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.injector.server.TemporaryPlayer;
 import com.comphenix.protocol.wrappers.BlockPosition;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.util.Objects;
-import java.util.logging.Logger;
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
+
+import java.util.Objects;
+import java.util.logging.Logger;
 
 public class TranslatorServerbound {
 
@@ -36,7 +32,7 @@ public class TranslatorServerbound {
 			case "SET_COMMAND_BLOCK":
 			case "UPDATE_SIGN":
 			case "BLOCK_DIG":
- 				recvPosition(logger, packet, offset);
+				recvPosition(logger, packet, offset);
 				break;
 			case USE_ITEM:
 				break;

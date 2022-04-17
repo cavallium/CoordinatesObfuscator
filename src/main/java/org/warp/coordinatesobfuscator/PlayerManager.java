@@ -1,13 +1,14 @@
 package org.warp.coordinatesobfuscator;
 
 import com.comphenix.protocol.injector.server.TemporaryPlayer;
+import org.bukkit.Location;
+import org.bukkit.World;
+import org.bukkit.entity.Player;
+
 import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Logger;
-import org.bukkit.Location;
-import org.bukkit.World;
-import org.bukkit.entity.Player;
 
 public class PlayerManager {
 

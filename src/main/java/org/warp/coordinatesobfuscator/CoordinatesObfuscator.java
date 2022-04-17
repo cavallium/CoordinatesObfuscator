@@ -1,27 +1,13 @@
 package org.warp.coordinatesobfuscator;
 
 import com.comphenix.protocol.PacketType;
-import com.comphenix.protocol.PacketType.Play;
-import com.comphenix.protocol.PacketType.Play.Client;
 import com.comphenix.protocol.PacketType.Play.Server;
-import com.comphenix.protocol.ProtocolLib;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
-import com.comphenix.protocol.events.ConnectionSide;
-import com.comphenix.protocol.events.ListenerPriority;
-import com.comphenix.protocol.events.PacketAdapter;
-import com.comphenix.protocol.events.PacketContainer;
-import com.comphenix.protocol.events.PacketEvent;
+import com.comphenix.protocol.events.*;
 import com.comphenix.protocol.injector.GamePhase;
-import com.comphenix.protocol.wrappers.EnumWrappers.NativeGameMode;
 import com.comphenix.protocol.wrappers.nbt.NbtBase;
-import java.lang.reflect.InvocationTargetException;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.logging.Logger;
 import org.bukkit.Bukkit;
-import org.bukkit.World.Environment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -30,8 +16,12 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 
-public class CoordinatesObfuscator extends JavaPlugin implements Listener {
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.logging.Logger;
 
+public class CoordinatesObfuscator extends JavaPlugin implements Listener {
 
 	public static final boolean DEBUG_ENABLED = "debug".equals(System.getProperty("coordinates_obfuscator.env"));
 	public static final boolean DISALLOW_REMOVING_NONEXISTENT_COORDINATES = false;
@@ -99,7 +89,7 @@ public class CoordinatesObfuscator extends JavaPlugin implements Listener {
 			packets.add(PacketType.Play.Server.SET_SLOT);
 
 			packets.add(Server.TILE_ENTITY_DATA);
-			
+
 			//todo: these packets shouldn't have position. Check if some of them must be translated
 			// packets.add(Server.ENTITY_DESTROY);
 			// packets.add(Server.ENTITY_EQUIPMENT);

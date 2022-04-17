@@ -1,12 +1,13 @@
 package org.warp.coordinatesobfuscator;
 
+import org.bukkit.World;
+import org.bukkit.entity.Player;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.logging.Logger;
-import org.bukkit.World;
-import org.bukkit.entity.Player;
 
 public class CoordsOffsetsManager {
 	private final Map<UUID, HashMap<UUID, CoordinateOffset>> playerCoordsPerWorld = new HashMap<>();
@@ -145,9 +146,6 @@ public class CoordsOffsetsManager {
 			return null;
 		}
 		CoordinateOffset offset = worldsMap.get(worldUUID);
-		if (offset == null) {
-			return null;
-		}
 		return offset;
 	}
 }

@@ -1,10 +1,11 @@
 package org.warp.coordinatesobfuscator;
 
+import org.bukkit.Location;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import org.bukkit.Location;
 
 public class LastPlayerCoordinateManager {
 	Map<UUID, Location> locations = new HashMap<>();

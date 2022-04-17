@@ -1,31 +1,30 @@
 package org.warp.coordinatesobfuscator;
 
+import com.comphenix.protocol.events.InternalStructure;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.injector.server.TemporaryPlayer;
+import com.comphenix.protocol.reflect.EquivalentConverter;
 import com.comphenix.protocol.reflect.StructureModifier;
 import com.comphenix.protocol.wrappers.BlockPosition;
 import com.comphenix.protocol.wrappers.Converters;
 import com.comphenix.protocol.wrappers.WrappedWatchableObject;
-import com.comphenix.protocol.wrappers.nbt.NbtBase;
 import com.comphenix.protocol.wrappers.nbt.NbtCompound;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.logging.Logger;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.*;
+import java.util.logging.Logger;
+
 public class TranslatorClientbound {
 
 	private static final Class<?> NMS_BLOCK_POSITION_CLASS;
 	private static final Method NMS_BLOCK_POSITION_ADD_CLASS;
+	private static final EquivalentConverter<InternalStructure> INTERNAL_STRUCTURE_CONVERTER;
 
 	static {
 		Class<?> blockPositionClass = null;
@@ -43,6 +42,16 @@ public class TranslatorClientbound {
 			e.printStackTrace();
 		}
 		NMS_BLOCK_POSITION_ADD_CLASS = blockPositionAddMethod;
+
+		EquivalentConverter<InternalStructure> internalStructureEquivalentConverter = null;
+		try {
+			Field internalStructureConverter = InternalStructure.class.getDeclaredField("CONVERTER");
+			internalStructureConverter.setAccessible(true);
+			internalStructureEquivalentConverter = (EquivalentConverter<InternalStructure>) internalStructureConverter.get(null);
+		} catch (NoSuchFieldException | IllegalAccessException e) {
+			throw new RuntimeException(e);
+		}
+		INTERNAL_STRUCTURE_CONVERTER = internalStructureEquivalentConverter;
 	}
 
 	public static boolean outgoing(Logger logger, final PacketContainer packet, final Player player) {
@@ -157,8 +166,7 @@ public class TranslatorClientbound {
 			case "ENTITY_METADATA":
 				if (packet.getWatchableCollectionModifier().size() > 0) {
 					packet.getWatchableCollectionModifier().modify(0, wrappedWatchableObjects -> {
-						if (wrappedWatchableObjects == null)
-							return null;
+						if (wrappedWatchableObjects == null) return null;
 						ArrayList<WrappedWatchableObject> result = new ArrayList<WrappedWatchableObject>(wrappedWatchableObjects.size());
 						for (WrappedWatchableObject wrappedWatchableObject : wrappedWatchableObjects) {
 							if (wrappedWatchableObject == null) {
@@ -208,7 +216,7 @@ public class TranslatorClientbound {
 				minTeleportDistance *= minTeleportDistance; // squared
 				if (lastLocation.distanceSquared(player.getLocation()) > minTeleportDistance) {
 					offset = PlayerManager.teleportPlayer(player, player.getWorld(), true);
-					logger.fine("Teleporting player. Prev[" + lastLocation.getBlockX() + "," + lastLocation.getBlockZ() + "] Next[" + player.getLocation().getX() + "," + player.getLocation().getZ() + "]" );
+					logger.fine("Teleporting player. Prev[" + lastLocation.getBlockX() + "," + lastLocation.getBlockZ() + "] Next[" + player.getLocation().getX() + "," + player.getLocation().getZ() + "]");
 					hasSetLastLocation = true;
 				}
 			}
@@ -221,8 +229,7 @@ public class TranslatorClientbound {
 
 	private static void fixWindowItems(Logger logger, PacketContainer packet, CoordinateOffset offset) {
 		packet.getItemListModifier().modify(0, itemStacks -> {
-			if (itemStacks == null)
-				return null;
+			if (itemStacks == null) return null;
 			List<ItemStack> newItems = new ArrayList<>(itemStacks.size());
 			for (ItemStack itemStack : itemStacks) {
 				if (itemStack == null) {
@@ -282,7 +289,7 @@ public class TranslatorClientbound {
 			}
 		});
 		if (includeLight) {
-			StructureModifier<List<byte[]>> byteArrays = packet.getLists(Converters.passthrough(byte[].class));
+			StructureModifier<List<byte[]>> byteArrays = packet.getStructures().read(0).getLists(Converters.passthrough(byte[].class));
 			for (int i = 0; i < 2; i++) {
 				byteArrays.modify(i, list -> {
 					if (list == null) return null;
@@ -293,23 +300,20 @@ public class TranslatorClientbound {
 			}
 		}
 		if (includesEntities) {
-			packet.getListNbtModifier().modify(0, entities -> {
-				if (entities != null) {
-					for (NbtBase<?> entity : entities) {
-						NbtCompound entityCompound = (NbtCompound) entity;
-						if (entityCompound.containsKey("x") && entityCompound.containsKey("z")) {
-							entityCompound.put("x", entityCompound.getInteger("x") - offset.getXInt());
-							entityCompound.put("z", entityCompound.getInteger("z") - offset.getZInt());
-						}
-					}
-					return entities;
-				} else {
-					return null;
+			packet.getStructures().read(0).getLists(INTERNAL_STRUCTURE_CONVERTER).modify(0, entities -> {
+				if (entities == null) return null;
+				for (InternalStructure entity : entities) {
+					// ((blockX & 15) << 4) | (blockZ & 15)
+					entity.getIntegers().modify(0, packedXZ -> {
+						int x = (packedXZ >> 4) - offset.getXInt();
+						int y = (packedXZ & 15) - offset.getZInt();
+						return ((x & 15) << 4) | (y & 15);
+					});
 				}
+				return entities;
 			});
 		}
 	}
-
 
 	private static void sendChunkBulk(Logger logger, final PacketContainer packet, final CoordinateOffset offset) {
 		if (packet.getIntegerArrays().size() > 1) {
@@ -383,8 +387,8 @@ public class TranslatorClientbound {
 
 	private static void sendInt(Logger logger, final PacketContainer packet, final CoordinateOffset offset, final int index) {
 		if (packet.getIntegers().size() > 2) {
-		packet.getIntegers().modify(index, curr_x -> curr_x == null ? null : curr_x - offset.getXInt());
-		packet.getIntegers().modify(index + 2, curr_z -> curr_z == null ? null : curr_z - offset.getZInt());
+			packet.getIntegers().modify(index, curr_x -> curr_x == null ? null : curr_x - offset.getXInt());
+			packet.getIntegers().modify(index + 2, curr_z -> curr_z == null ? null : curr_z - offset.getZInt());
 		} else {
 			logger.severe("Packet size error");
 		}
@@ -392,8 +396,8 @@ public class TranslatorClientbound {
 
 	private static void sendIntChunk(Logger logger, final PacketContainer packet, final CoordinateOffset offset) {
 		if (packet.getIntegers().size() > 1) {
-		packet.getIntegers().modify(0, curr_x -> curr_x == null ? null : curr_x - offset.getXChunk());
-		packet.getIntegers().modify(1, curr_z -> curr_z == null ? null : curr_z - offset.getZChunk());
+			packet.getIntegers().modify(0, curr_x -> curr_x == null ? null : curr_x - offset.getXChunk());
+			packet.getIntegers().modify(1, curr_z -> curr_z == null ? null : curr_z - offset.getZChunk());
 		} else {
 			logger.severe("Packet size error");
 		}
@@ -403,7 +407,7 @@ public class TranslatorClientbound {
 	private static void sendBlockPosition(Logger logger, final PacketContainer packet, final CoordinateOffset offset) {
 		if (packet.getBlockPositionModifier().size() > 0) {
 			packet.getBlockPositionModifier().modify(0, pos -> offsetPosition(logger, offset, pos));
-		}	else {
+		} else {
 			logger.severe("Packet size error");
 		}
 	}
@@ -411,12 +415,12 @@ public class TranslatorClientbound {
 	private static void fixVibrationSignal(Logger logger, final PacketContainer packet, final CoordinateOffset offset) {
 		if (packet.getBlockPositionModifier().size() >= 1) {
 			packet.getBlockPositionModifier().modify(0, pos -> offsetPosition(logger, offset, pos));
-		}	else {
+		} else {
 			logger.severe("Packet size error");
 		}
 		if (packet.getBlockPositionModifier().size() >= 2) {
 			packet.getBlockPositionModifier().modify(1, pos -> offsetPosition(logger, offset, pos));
-		}	else {
+		} else {
 			logger.severe("Packet size error");
 		}
 	}
