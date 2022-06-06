@@ -20,19 +20,19 @@ public class PlayerManager {
 	private static LastPlayerCoordinateManager lastPlayerCoordinateManager;
 
 	public static void spawnPlayer(final Player player, final World world) {
-		coordsOffsetsManager.put(player, world, generateOffset());
+		coordsOffsetsManager.put(player, world, generateOffset(world)); // StarLightMinecraft - make center and size of the world border into the offset to make sure it's always generate in the world border
 		lastPlayerCoordinateManager.setLastPlayerLocation(player.getUniqueId(), player.getLocation());
 	}
 
 	public static CoordinateOffset respawnPlayer(final Player player, final World world) {
-		CoordinateOffset offset = generateOffset();
+		CoordinateOffset offset = generateOffset(world); // StarLightMinecraft - make center and size of the world border into the offset to make sure it's always generate in the world border
 		coordsOffsetsManager.replace(player, world, offset);
 		lastPlayerCoordinateManager.setLastPlayerLocation(player.getUniqueId(), player.getLocation());
 		return offset;
 	}
 
 	public static CoordinateOffset teleportPlayer(final Player player, final World world, boolean overrideLastLocation) {
-		CoordinateOffset offset = generateOffset();
+		CoordinateOffset offset = generateOffset(world); // StarLightMinecraft - make center and size of the world border into the offset to make sure it's always generate in the world border
 		coordsOffsetsManager.replace(player, world, offset);
 		if (overrideLastLocation) {
 			lastPlayerCoordinateManager.setLastPlayerLocation(player.getUniqueId(), player.getLocation());
@@ -43,16 +43,21 @@ public class PlayerManager {
 
 	public static void joinPlayer(final Player player) {
 		if (!(player instanceof TemporaryPlayer)) {
-			coordsOffsetsManager.getOrPut(player, player.getWorld(), PlayerManager::generateOffset);
+			coordsOffsetsManager.getOrPut(player, player.getWorld(), () -> generateOffset(player.getWorld())); // StarLightMinecraft - make center and size of the world border into the offset to make sure it's always generate in the world border
 			lastPlayerCoordinateManager.setLastPlayerLocation(player.getUniqueId(), player.getLocation());
 		} else {
 			lastPlayerCoordinateManager.resetLastPlayerLocation(player.getUniqueId());
 		}
 	}
 
-	private static CoordinateOffset generateOffset() {
+	private static CoordinateOffset generateOffset(World world) {
 		//return CoordinateOffset.of(64 * 16, 64 * 16);
-		return CoordinateOffset.of(getRandomChunkOffset(true) * 16, getRandomChunkOffset(false) * 16);
+		// StarLightMinecraft Start - make center and size of the world border into the offset to make sure it's always generate in the world border
+		int x = world.getWorldBorder().getCenter().getBlockX();
+		int z = world.getWorldBorder().getCenter().getBlockZ();
+		double size = world.getWorldBorder().getSize();
+		// StarLightMinecraft End
+		return CoordinateOffset.of((getRandomChunkOffset(true) * 16) % (size * 2) - x, getRandomChunkOffset(false) * 16 % (size * 2) - z); // StarLightMinecraft - make center and size of the world border into the offset to make sure it's always generate in the world border
 	}
 
 	private static int getRandomChunkOffset(boolean x) {
@@ -100,11 +105,11 @@ public class PlayerManager {
 		AtomicBoolean generated = new AtomicBoolean(false);
 		CoordinateOffset result = coordsOffsetsManager.getOrPut(player, world, () -> {
 			generated.set(true);
-			return generateOffset();
+			return generateOffset(world); // StarLightMinecraft - make center and size of the world border into the offset to make sure it's always generate in the world border
 		});
 		if (generated.get()) {
 			if (!(player instanceof TemporaryPlayer)) {
-				coordsOffsetsManager.getOrPut(player, player.getWorld(), PlayerManager::generateOffset);
+				coordsOffsetsManager.getOrPut(player, player.getWorld(), () -> generateOffset(world)); // StarLightMinecraft - make center and size of the world border into the offset to make sure it's always generate in the world border
 			}
 			lastPlayerCoordinateManager.resetLastPlayerLocation(player.getUniqueId());
 		}
