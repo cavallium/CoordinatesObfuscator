@@ -195,6 +195,7 @@ public class CoordinatesObfuscator extends JavaPlugin implements Listener {
 		packet = packet.shallowClone();
 		int i = 0;
 		for (final NbtBase<?> obj : packet.getNbtModifier().getValues()) {
+			if (obj == null) continue;
 			packet.getNbtModifier().write(i, obj.deepClone());
 			i++;
 		}
