@@ -20,19 +20,19 @@ public class PlayerManager {
 	private static LastPlayerCoordinateManager lastPlayerCoordinateManager;
 
 	public static void spawnPlayer(final Player player, final World world) {
-		coordsOffsetsManager.put(player, world, generateOffset(world)); // StarLightMinecraft - make center and size of the world border into the offset to make sure it's always generate in the world border
+		coordsOffsetsManager.put(player, world, generateOffset(player, world)); // StarLightMinecraft - make center and size of the world border into the offset to make sure it's always generate in the world border
 		lastPlayerCoordinateManager.setLastPlayerLocation(player.getUniqueId(), player.getLocation());
 	}
 
 	public static CoordinateOffset respawnPlayer(final Player player, final World world) {
-		CoordinateOffset offset = generateOffset(world); // StarLightMinecraft - make center and size of the world border into the offset to make sure it's always generate in the world border
+		CoordinateOffset offset = generateOffset(player,world); // StarLightMinecraft - make center and size of the world border into the offset to make sure it's always generate in the world border
 		coordsOffsetsManager.replace(player, world, offset);
 		lastPlayerCoordinateManager.setLastPlayerLocation(player.getUniqueId(), player.getLocation());
 		return offset;
 	}
 
 	public static CoordinateOffset teleportPlayer(final Player player, final World world, boolean overrideLastLocation) {
-		CoordinateOffset offset = generateOffset(world); // StarLightMinecraft - make center and size of the world border into the offset to make sure it's always generate in the world border
+		CoordinateOffset offset = generateOffset(player,world); // StarLightMinecraft - make center and size of the world border into the offset to make sure it's always generate in the world border
 		coordsOffsetsManager.replace(player, world, offset);
 		if (overrideLastLocation) {
 			lastPlayerCoordinateManager.setLastPlayerLocation(player.getUniqueId(), player.getLocation());
@@ -43,14 +43,15 @@ public class PlayerManager {
 
 	public static void joinPlayer(final Player player) {
 		if (!(player instanceof TemporaryPlayer)) {
-			coordsOffsetsManager.getOrPut(player, player.getWorld(), () -> generateOffset(player.getWorld())); // StarLightMinecraft - make center and size of the world border into the offset to make sure it's always generate in the world border
+			coordsOffsetsManager.getOrPut(player, player.getWorld(), () -> generateOffset(player,player.getWorld())); // StarLightMinecraft - make center and size of the world border into the offset to make sure it's always generate in the world border
 			lastPlayerCoordinateManager.setLastPlayerLocation(player.getUniqueId(), player.getLocation());
 		} else {
 			lastPlayerCoordinateManager.resetLastPlayerLocation(player.getUniqueId());
 		}
 	}
 
-	private static CoordinateOffset generateOffset(World world) {
+	private static CoordinateOffset generateOffset(Player player, World world) {
+		if (player.hasPermission("coordinatesobfuscator.bypass")) return CoordinateOffset.of(0, 0); //StarLightMinecraft - permission to bypass the obfuscation
 		//return CoordinateOffset.of(64 * 16, 64 * 16);
 		// StarLightMinecraft Start - make center and size of the world border into the offset to make sure it's always generate in the world border
 		int x = world.getWorldBorder().getCenter().getBlockX();
@@ -105,11 +106,11 @@ public class PlayerManager {
 		AtomicBoolean generated = new AtomicBoolean(false);
 		CoordinateOffset result = coordsOffsetsManager.getOrPut(player, world, () -> {
 			generated.set(true);
-			return generateOffset(world); // StarLightMinecraft - make center and size of the world border into the offset to make sure it's always generate in the world border
+			return generateOffset(player,world); // StarLightMinecraft - make center and size of the world border into the offset to make sure it's always generate in the world border
 		});
 		if (generated.get()) {
 			if (!(player instanceof TemporaryPlayer)) {
-				coordsOffsetsManager.getOrPut(player, player.getWorld(), () -> generateOffset(world)); // StarLightMinecraft - make center and size of the world border into the offset to make sure it's always generate in the world border
+				coordsOffsetsManager.getOrPut(player, player.getWorld(), () -> generateOffset(player,world)); // StarLightMinecraft - make center and size of the world border into the offset to make sure it's always generate in the world border
 			}
 			lastPlayerCoordinateManager.resetLastPlayerLocation(player.getUniqueId());
 		}
