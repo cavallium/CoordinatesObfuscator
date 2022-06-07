@@ -1,6 +1,6 @@
 name: ${project.name}
 main: ${project.groupId}.coordinatesobfuscator.CoordinatesObfuscator
 version: ${project.version}
-api-version: 1.17
+api-version: 1.18
 author: Cavallium
 depend: [ ProtocolLib ]
