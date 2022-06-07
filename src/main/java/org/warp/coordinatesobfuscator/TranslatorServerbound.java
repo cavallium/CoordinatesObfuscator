@@ -20,6 +20,9 @@ public class TranslatorServerbound {
 		}
 		CoordinateOffset offset = PlayerManager.getOffsetOrJoinPlayer(player, player.getWorld());
 		Objects.requireNonNull(offset);
+		if (offset.isZero()) {
+			return;
+		}
 		switch (packet.getType().name()) {
 			case "POSITION":
 			case "VEHICLE_MOVE":
