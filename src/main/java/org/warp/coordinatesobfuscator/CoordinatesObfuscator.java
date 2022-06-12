@@ -8,12 +8,15 @@ import com.comphenix.protocol.events.*;
 import com.comphenix.protocol.injector.GamePhase;
 import com.comphenix.protocol.wrappers.nbt.NbtBase;
 import org.bukkit.Bukkit;
+import org.bukkit.WorldBorder;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerRespawnEvent;
+import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.ArrayList;
@@ -184,12 +187,30 @@ public class CoordinatesObfuscator extends JavaPlugin implements Listener {
 		PlayerManager.exitPlayer(event.getPlayer());
 	}
 
-	@EventHandler(priority = EventPriority.LOWEST)
+	@EventHandler(priority = EventPriority.MONITOR)
 	public void onPlayerJoin(final PlayerJoinEvent event) {
 		// This part of code has been commented because this event is fired too late.
 		//PlayerManager.joinPlayer(event.getPlayer());
+
+		setMaxWorldBorder(event.getPlayer()); // StarLightMinecraft
 	}
 
+	// StarLightMinecraft Start - set a fake "full" worldborder for player to avoid breaking
+	@EventHandler(priority = EventPriority.MONITOR)
+	public void onPlayerTeleport(final PlayerRespawnEvent event){
+		setMaxWorldBorder(event.getPlayer());
+	}
+
+	private void setMaxWorldBorder(final Player player){
+		Bukkit.getScheduler().runTaskLater(this, () -> {
+			if (!player.isOnline()) return;
+			WorldBorder border = Bukkit.createWorldBorder();
+			border.setCenter(player.getWorld().getWorldBorder().getCenter());
+			border.setSize(59999968E7);
+			player.setWorldBorder(border);
+		}, 5);
+	}
+	// StarLightMinecraft End
 
 	private PacketContainer cloneTileEntityData(PacketContainer packet) {
 		packet = packet.shallowClone();
