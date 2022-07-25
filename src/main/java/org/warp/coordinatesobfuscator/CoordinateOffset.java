@@ -36,10 +36,10 @@ public final class CoordinateOffset {
 	}
 
 	public void validate() {
-		if ((int) (Math.round(x / 16f) * 16) != x) {
+		if (x % 16 != 0) {
 			throw new IllegalArgumentException("x is not aligned with the chunks!");
 		}
-		if ((int) (Math.round(z / 16f) * 16) != z) {
+		if (z % 16 != 0) {
 			throw new IllegalArgumentException("z is not aligned with the chunks!");
 		}
 		double reconvertedX = (int) x;

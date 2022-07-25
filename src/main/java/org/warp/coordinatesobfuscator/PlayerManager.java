@@ -12,6 +12,8 @@ import java.util.Random;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Logger;
 
+import org.jetbrains.annotations.Nullable;
+
 public class PlayerManager {
 
 	private static final Random random = new Random();
@@ -52,8 +54,8 @@ public class PlayerManager {
 		}
 	}
 
-	private static CoordinateOffset generateOffset(Player player) {
-		if (player.hasPermission("coordinatesobfuscator.bypass")) return CoordinateOffset.of(0, 0); //StarLightMinecraft - permission to bypass the obfuscation
+	static CoordinateOffset generateOffset(@Nullable Player player) {
+		if (player != null && player.hasPermission("coordinatesobfuscator.bypass")) return CoordinateOffset.of(0, 0); //StarLightMinecraft - permission to bypass the obfuscation
 
 		//return CoordinateOffset.of(64 * 16, 64 * 16);
 		return CoordinateOffset.of(getRandomChunkOffset(true) * 16, getRandomChunkOffset(false) * 16); // StarLightMinecraft - make center and size of the world border into the offset to make sure it's always generate in the world border
