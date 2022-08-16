@@ -22,7 +22,6 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
-import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.ArrayList;
@@ -94,6 +93,7 @@ public class CoordinatesObfuscator extends JavaPlugin implements Listener {
 			packets.add(PacketType.Play.Server.WORLD_EVENT);
 
 			packets.add(PacketType.Play.Server.NAMED_SOUND_EFFECT);
+			packets.add(PacketType.Play.Server.CUSTOM_SOUND_EFFECT);
 
 			packets.add(PacketType.Play.Server.NAMED_ENTITY_SPAWN);
 			packets.add(PacketType.Play.Server.SPAWN_ENTITY);

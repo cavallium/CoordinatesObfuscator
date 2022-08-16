@@ -2,7 +2,7 @@ package org.warp.coordinatesobfuscator;
 
 import com.comphenix.protocol.events.InternalStructure;
 import com.comphenix.protocol.events.PacketContainer;
-import com.comphenix.protocol.injector.server.TemporaryPlayer;
+import com.comphenix.protocol.injector.temporary.TemporaryPlayer;
 import com.comphenix.protocol.reflect.EquivalentConverter;
 import com.comphenix.protocol.reflect.StructureModifier;
 import com.comphenix.protocol.wrappers.BlockPosition;
@@ -161,6 +161,7 @@ public class TranslatorClientbound {
 				sendExplosion(logger, packet, offset);
 				break;
 			case "NAMED_SOUND_EFFECT":
+			case "CUSTOM_SOUND_EFFECT":
 				sendInt8(logger, packet, offset);
 				break;
 			case "ENTITY_METADATA":

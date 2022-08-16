@@ -13,7 +13,7 @@ shifted by a random number, making useless every tool that uses absolute coordin
 
 Requirements
 ------------
-ProtocolLib
+ProtocolLib 5.0.0 Snapshot or higher
 
 Permissions
 -----------

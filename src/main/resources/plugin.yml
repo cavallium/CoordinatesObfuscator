@@ -1,6 +1,10 @@
 name: ${project.name}
 main: ${project.groupId}.coordinatesobfuscator.CoordinatesObfuscator
 version: ${project.version}
-api-version: 1.18
+api-version: 1.19
 author: Cavallium
 depend: [ ProtocolLib ]
+permissions:
+  coordinatesobfuscator.bypass:
+    description: "Bypass obfuscation"
+    default: op

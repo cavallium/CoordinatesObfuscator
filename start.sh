@@ -1,6 +1,6 @@
 WORKSPACE=".papermc"
-MC_VERSION="1.17.1"
-PAPER_BUILD="latest"
+MC_VERSION="1.19.2"
+PAPER_BUILD="130"
 
 ## ============== DO NOT EDIT THE SCRIPT BELOW UNLESS YOU KNOW WHAT YOU ARE DOING ============== ##
 
@@ -20,7 +20,8 @@ cd $WORKSPACE || exit # Moving to the workspace fodler or exit if it fails.
 
 # Check for the paper executable
 PAPER_JAR="paper-$MC_VERSION-$PAPER_BUILD.jar"
-PAPER_LNK="https://papermc.io/api/v1/paper/$MC_VERSION/$PAPER_BUILD/download"
+url="https://papermc.io/api/v2/projects/paper"
+PAPER_LNK="$url/versions/$MC_VERSION/builds/$PAPER_BUILD/downloads/paper-$MC_VERSION-$PAPER_BUILD.jar"
 
 if [ ! -f $PAPER_JAR ]; then
   wget -O $PAPER_JAR $PAPER_LNK
