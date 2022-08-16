@@ -7,6 +7,12 @@ import com.comphenix.protocol.ProtocolManager;
 import com.comphenix.protocol.events.*;
 import com.comphenix.protocol.injector.GamePhase;
 import com.comphenix.protocol.wrappers.nbt.NbtBase;
+
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+
+import java.lang.invoke.MethodType;
+
 import org.bukkit.Bukkit;
 import org.bukkit.WorldBorder;
 import org.bukkit.entity.Player;
@@ -28,6 +34,20 @@ public class CoordinatesObfuscator extends JavaPlugin implements Listener {
 
 	public static final boolean DEBUG_ENABLED = "debug".equals(System.getProperty("coordinates_obfuscator.env"));
 	public static final boolean DISALLOW_REMOVING_NONEXISTENT_COORDINATES = false;
+
+	private static final MethodHandle CREATE_WORLD_BORDER_METHOD;
+
+	static {
+		var lookup = MethodHandles.publicLookup();
+		MethodHandle createWorldBorderMethod = null;
+		try {
+			Class<?> worldBorderClass = lookup.findClass("org.bukkit.WorldBorder");
+			createWorldBorderMethod = lookup.findStatic(Bukkit.class, "createWorldBorder", MethodType.methodType(worldBorderClass));
+		} catch (ClassNotFoundException | IllegalAccessException | NoSuchMethodException e) {
+			// ignore
+		}
+		CREATE_WORLD_BORDER_METHOD = createWorldBorderMethod;
+	}
 	private Logger logger;
 
 	@Override
@@ -46,7 +66,7 @@ public class CoordinatesObfuscator extends JavaPlugin implements Listener {
 
 		final ProtocolManager pm = ProtocolLibrary.getProtocolManager();
 
-		final HashSet<PacketType> packets = new HashSet<PacketType>();
+		final HashSet<PacketType> packets = new HashSet<>();
 
 		// /Server side packets
 		{
@@ -204,7 +224,15 @@ public class CoordinatesObfuscator extends JavaPlugin implements Listener {
 	private void setMaxWorldBorder(final Player player){
 		Bukkit.getScheduler().runTaskLater(this, () -> {
 			if (!player.isOnline()) return;
-			WorldBorder border = Bukkit.createWorldBorder();
+			// Some bukkit versions don't have this method
+			if (CREATE_WORLD_BORDER_METHOD == null) return;
+			WorldBorder border;
+			try {
+				border = (WorldBorder) CREATE_WORLD_BORDER_METHOD.invokeExact();
+			} catch (Throwable e) {
+				// This shouldn't happen
+				throw new RuntimeException(e);
+			}
 			border.setCenter(player.getWorld().getWorldBorder().getCenter());
 			border.setSize(59999968E7);
 			player.setWorldBorder(border);
