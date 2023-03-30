@@ -5,9 +5,10 @@ import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.injector.temporary.TemporaryPlayer;
 import com.comphenix.protocol.reflect.EquivalentConverter;
 import com.comphenix.protocol.reflect.StructureModifier;
+import com.comphenix.protocol.utility.MinecraftReflection;
 import com.comphenix.protocol.wrappers.BlockPosition;
 import com.comphenix.protocol.wrappers.Converters;
-import com.comphenix.protocol.wrappers.WrappedWatchableObject;
+import com.comphenix.protocol.wrappers.WrappedDataValue;
 import com.comphenix.protocol.wrappers.nbt.NbtCompound;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
@@ -27,17 +28,11 @@ public class TranslatorClientbound {
 	private static final EquivalentConverter<InternalStructure> INTERNAL_STRUCTURE_CONVERTER;
 
 	static {
-		Class<?> blockPositionClass = null;
-		try {
-			blockPositionClass = Class.forName("net.minecraft.core.BlockPosition");
-		} catch (ClassNotFoundException e) {
-			e.printStackTrace();
-		}
-		NMS_BLOCK_POSITION_CLASS = blockPositionClass;
+		NMS_BLOCK_POSITION_CLASS = MinecraftReflection.getBlockPositionClass();
 
 		Method blockPositionAddMethod = null;
 		try {
-			blockPositionAddMethod = blockPositionClass.getDeclaredMethod("c", int.class, int.class, int.class);
+			blockPositionAddMethod = NMS_BLOCK_POSITION_CLASS.getDeclaredMethod("c", int.class, int.class, int.class);
 		} catch (NoSuchMethodException e) {
 			e.printStackTrace();
 		}
@@ -72,16 +67,11 @@ public class TranslatorClientbound {
 			case "SPAWN_POSITION":
 			case "WORLD_EVENT":
 			case "UPDATE_SIGN":
-			case "BLOCK_BREAK":
 			case "BLOCK_BREAK_ANIMATION":
 			case "BLOCK_ACTION":
 			case "BLOCK_CHANGE":
-			case "SPAWN_ENTITY_PAINTING":
 			case "OPEN_SIGN_EDITOR":
 				sendBlockPosition(logger, packet, offset);
-				break;
-			case "ADD_VIBRATION_SIGNAL":
-				fixVibrationSignal(logger, packet, offset);
 				break;
 			case "RESPAWN":
 				logger.fine("[out]Respawning player");
@@ -132,12 +122,14 @@ public class TranslatorClientbound {
 				Objects.requireNonNull(offset);
 				sendDouble(logger, packet, offset);
 				break;
-			case "SPAWN_ENTITY_LIVING":
-			case "WORLD_PARTICLES":
 			case "SPAWN_ENTITY_WEATHER":
 			case "SPAWN_ENTITY_EXPERIENCE_ORB":
 			case "ENTITY_TELEPORT":
 				sendDouble(logger, packet, offset);
+				break;
+			case "WORLD_PARTICLES":
+				sendDouble(logger, packet, offset);
+				fixVibrationParticle(logger, packet, offset);
 				break;
 			case "UNLOAD_CHUNK":
 				sendChunk(logger, packet, offset, false, false);
@@ -161,15 +153,14 @@ public class TranslatorClientbound {
 				sendExplosion(logger, packet, offset);
 				break;
 			case "NAMED_SOUND_EFFECT":
-			case "CUSTOM_SOUND_EFFECT":
 				sendInt8(logger, packet, offset);
 				break;
 			case "ENTITY_METADATA":
-				if (packet.getWatchableCollectionModifier().size() > 0) {
-					packet.getWatchableCollectionModifier().modify(0, wrappedWatchableObjects -> {
-						if (wrappedWatchableObjects == null) return null;
-						ArrayList<WrappedWatchableObject> result = new ArrayList<WrappedWatchableObject>(wrappedWatchableObjects.size());
-						for (WrappedWatchableObject wrappedWatchableObject : wrappedWatchableObjects) {
+				if (packet.getDataValueCollectionModifier().size() > 0) {
+					packet.getDataValueCollectionModifier().modify(0, wrappedDataValues -> {
+						if (wrappedDataValues == null) return null;
+						ArrayList<WrappedDataValue> result = new ArrayList<WrappedDataValue>(wrappedDataValues.size());
+						for (WrappedDataValue wrappedWatchableObject : wrappedDataValues) {
 							if (wrappedWatchableObject == null) {
 								result.add(null);
 								continue;
@@ -413,14 +404,15 @@ public class TranslatorClientbound {
 		}
 	}
 
-	private static void fixVibrationSignal(Logger logger, final PacketContainer packet, final CoordinateOffset offset) {
-		if (packet.getBlockPositionModifier().size() >= 1) {
-			packet.getBlockPositionModifier().modify(0, pos -> offsetPosition(logger, offset, pos));
-		} else {
-			logger.severe("Packet size error");
-		}
-		if (packet.getBlockPositionModifier().size() >= 2) {
-			packet.getBlockPositionModifier().modify(1, pos -> offsetPosition(logger, offset, pos));
+	private static void fixVibrationParticle(Logger logger, final PacketContainer packet, final CoordinateOffset offset) {
+		if (packet.getStructures().size() > 0) {
+			InternalStructure outerStructure = packet.getStructures().read(0);
+			if (outerStructure.getStructures().size() > 0) {
+				InternalStructure innerStructure = outerStructure.getStructures().read(0);
+				if (innerStructure.getBlockPositionModifier().size() > 0) {
+					innerStructure.getBlockPositionModifier().modify(0, p -> offsetPosition(logger, offset, p));
+				}
+			}
 		} else {
 			logger.severe("Packet size error");
 		}

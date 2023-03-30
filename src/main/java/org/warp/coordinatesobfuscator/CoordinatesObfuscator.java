@@ -75,8 +75,8 @@ public class CoordinatesObfuscator extends JavaPlugin implements Listener {
 			paramsServer.listenerPriority(ListenerPriority.HIGHEST);
 			paramsServer.gamePhase(GamePhase.PLAYING);
 
+			packets.add(PacketType.Play.Server.BUNDLE);
 			packets.add(PacketType.Play.Server.BLOCK_ACTION);
-			packets.add(PacketType.Play.Server.BLOCK_BREAK);
 			packets.add(PacketType.Play.Server.BLOCK_BREAK_ANIMATION);
 			packets.add(PacketType.Play.Server.BLOCK_CHANGE);
 			packets.add(PacketType.Play.Server.MULTI_BLOCK_CHANGE);
@@ -93,17 +93,13 @@ public class CoordinatesObfuscator extends JavaPlugin implements Listener {
 			packets.add(PacketType.Play.Server.WORLD_EVENT);
 
 			packets.add(PacketType.Play.Server.NAMED_SOUND_EFFECT);
-			packets.add(PacketType.Play.Server.CUSTOM_SOUND_EFFECT);
 
 			packets.add(PacketType.Play.Server.NAMED_ENTITY_SPAWN);
 			packets.add(PacketType.Play.Server.SPAWN_ENTITY);
-			packets.add(PacketType.Play.Server.SPAWN_ENTITY_LIVING);
 			packets.add(PacketType.Play.Server.SPAWN_ENTITY_EXPERIENCE_ORB);
-			packets.add(PacketType.Play.Server.SPAWN_ENTITY_PAINTING);
 			packets.add(PacketType.Play.Server.ENTITY_TELEPORT);
 
 			packets.add(PacketType.Play.Server.OPEN_SIGN_EDITOR);
-			packets.add(PacketType.Play.Server.ADD_VIBRATION_SIGNAL);
 
 			packets.add(PacketType.Play.Server.ENTITY_METADATA);
 			packets.add(PacketType.Play.Server.VIEW_CENTRE);
@@ -139,6 +135,7 @@ public class CoordinatesObfuscator extends JavaPlugin implements Listener {
 						case "LIGHT_UPDATE" -> packet = event.getPacket().shallowClone();
 						case "TILE_ENTITY_DATA" -> packet = cloneTileEntityData(event.getPacket());
 						case "MAP_CHUNK" -> packet = cloneMapChunkEntitiesData(event.getPacket());
+						case "WORLD_PARTICLES" -> packet = event.getPacket().deepClone();
 						default -> packet = event.getPacket().shallowClone();
 					}
 
