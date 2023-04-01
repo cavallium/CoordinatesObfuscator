@@ -29,6 +29,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.logging.Logger;
 
+import org.joml.GeometryUtils;
+
 public class CoordinatesObfuscator extends JavaPlugin implements Listener {
 
 	public static final boolean DEBUG_ENABLED = "debug".equals(System.getProperty("coordinates_obfuscator.env"));
@@ -212,30 +214,34 @@ public class CoordinatesObfuscator extends JavaPlugin implements Listener {
 		setMaxWorldBorder(event.getPlayer()); // StarLightMinecraft
 	}
 
-	// StarLightMinecraft Start - set a fake "full" worldborder for player to avoid breaking
 	@EventHandler(priority = EventPriority.MONITOR)
 	public void onPlayerTeleport(final PlayerRespawnEvent event){
 		setMaxWorldBorder(event.getPlayer());
 	}
 
-	private void setMaxWorldBorder(final Player player){
-		Bukkit.getScheduler().runTaskLater(this, () -> {
-			if (!player.isOnline()) return;
-			// Some bukkit versions don't have this method
-			if (CREATE_WORLD_BORDER_METHOD == null) return;
-			WorldBorder border;
-			try {
-				border = (WorldBorder) CREATE_WORLD_BORDER_METHOD.invokeExact();
-			} catch (Throwable e) {
-				// This shouldn't happen
-				throw new RuntimeException(e);
-			}
-			border.setCenter(player.getWorld().getWorldBorder().getCenter());
-			border.setSize(59999968E7);
-			player.setWorldBorder(border);
-		}, 5);
+	private void setMaxWorldBorder(final Player player) {
+		if (FoliaUtils.isFolia()) {
+			player.getScheduler().run(this, scheduledTask -> setMaxWorldBorderSync(player), null);
+		} else {
+			Bukkit.getScheduler().runTaskLater(this, () -> setMaxWorldBorderSync(player), 5);
+		}
 	}
-	// StarLightMinecraft End
+
+	private void setMaxWorldBorderSync(Player player) {
+		if (!player.isOnline()) return;
+		// Some bukkit versions don't have this method
+		if (CREATE_WORLD_BORDER_METHOD == null) return;
+		WorldBorder border;
+		try {
+			border = (WorldBorder) CREATE_WORLD_BORDER_METHOD.invokeExact();
+		} catch (Throwable e) {
+			// This shouldn't happen
+			throw new RuntimeException(e);
+		}
+		border.setCenter(player.getWorld().getWorldBorder().getCenter());
+		border.setSize(59999968E7);
+		player.setWorldBorder(border);
+	}
 
 	private PacketContainer cloneTileEntityData(PacketContainer packet) {
 		packet = packet.shallowClone();
