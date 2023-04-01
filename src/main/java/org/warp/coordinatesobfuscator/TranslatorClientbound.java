@@ -32,9 +32,13 @@ public class TranslatorClientbound {
 
 		Method blockPositionAddMethod = null;
 		try {
-			blockPositionAddMethod = NMS_BLOCK_POSITION_CLASS.getDeclaredMethod("c", int.class, int.class, int.class);
+			blockPositionAddMethod = NMS_BLOCK_POSITION_CLASS.getDeclaredMethod("offset", int.class, int.class, int.class);
 		} catch (NoSuchMethodException e) {
-			e.printStackTrace();
+			try {
+				blockPositionAddMethod = NMS_BLOCK_POSITION_CLASS.getDeclaredMethod("c", int.class, int.class, int.class);
+			} catch (NoSuchMethodException e2) {
+				e2.printStackTrace();
+			}
 		}
 		NMS_BLOCK_POSITION_ADD_CLASS = blockPositionAddMethod;
 
