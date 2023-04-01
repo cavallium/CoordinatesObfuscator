@@ -4,6 +4,7 @@ version: ${project.version}
 api-version: 1.19
 author: Cavallium
 depend: [ ProtocolLib ]
+folia-supported: true
 permissions:
   coordinatesobfuscator.bypass:
     description: "Bypass obfuscation"
