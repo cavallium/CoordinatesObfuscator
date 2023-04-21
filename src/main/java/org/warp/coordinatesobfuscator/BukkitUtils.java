@@ -1,8 +1,9 @@
 package org.warp.coordinatesobfuscator;
 
-public class FoliaUtils {
+public class BukkitUtils {
 
 	private static final boolean IS_FOLIA;
+	private static final Bukkit BUKKIT;
 
 	static {
 		boolean isFolia;
@@ -13,9 +14,15 @@ public class FoliaUtils {
 			isFolia = false;
 		}
 		IS_FOLIA = isFolia;
+
+		BUKKIT = isFolia ? new Folia() : new Craftbukkit();
 	}
-	
+
 	public static boolean isFolia() {
 		return IS_FOLIA;
+	}
+
+	public static Bukkit getBukkit() {
+		return BUKKIT;
 	}
 }

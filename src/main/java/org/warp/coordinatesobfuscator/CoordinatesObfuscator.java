@@ -29,8 +29,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.logging.Logger;
 
-import org.joml.GeometryUtils;
-
 public class CoordinatesObfuscator extends JavaPlugin implements Listener {
 
 	public static final boolean DEBUG_ENABLED = "debug".equals(System.getProperty("coordinates_obfuscator.env"));
@@ -220,10 +218,10 @@ public class CoordinatesObfuscator extends JavaPlugin implements Listener {
 	}
 
 	private void setMaxWorldBorder(final Player player) {
-		if (FoliaUtils.isFolia()) {
-			player.getScheduler().run(this, scheduledTask -> setMaxWorldBorderSync(player), null);
+		if (BukkitUtils.isFolia()) {
+			BukkitUtils.getBukkit().run(this, player, () -> setMaxWorldBorder(player), null);
 		} else {
-			Bukkit.getScheduler().runTaskLater(this, () -> setMaxWorldBorderSync(player), 5);
+			BukkitUtils.getBukkit().runLater(this, () -> setMaxWorldBorder(player), 5);
 		}
 	}
 
