@@ -219,9 +219,9 @@ public class CoordinatesObfuscator extends JavaPlugin implements Listener {
 
 	private void setMaxWorldBorder(final Player player) {
 		if (BukkitUtils.isFolia()) {
-			BukkitUtils.getBukkit().run(this, player, () -> setMaxWorldBorder(player), null);
+			BukkitUtils.getBukkit().run(this, player, () -> setMaxWorldBorderSync(player), null);
 		} else {
-			BukkitUtils.getBukkit().runLater(this, () -> setMaxWorldBorder(player), 5);
+			BukkitUtils.getBukkit().runLater(this, () -> setMaxWorldBorderSync(player), 5);
 		}
 	}
 
