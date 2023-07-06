@@ -178,6 +178,8 @@ public class TranslatorClientbound {
 									Object val = opt.get();
 									if (NMS_BLOCK_POSITION_CLASS.isInstance(val)) {
 										wrappedWatchableObject.setValue(Optional.of(offsetPositionMc(logger, offset, val)));
+									} else if (val instanceof BlockPosition blockPosition) {
+										wrappedWatchableObject.setValue(Optional.of(offsetPosition(logger, offset, blockPosition)));
 									}
 								}
 							} else if (oldValue instanceof BlockPosition blockPosition) {
