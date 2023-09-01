@@ -1,6 +1,10 @@
 CoordinatesObfuscator
 =====================
 
+**Replaced by [CoordinateOffset](https://github.com/joshuaprince/CoordinateOffset)!**
+
+---
+
 **Hide the real coordinates to the players.**
 
 This plugin helps the owner to make sure that players with modded clients do not take unfair advantage of vanilla
