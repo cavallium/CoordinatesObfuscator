@@ -1,7 +1,7 @@
 CoordinatesObfuscator
 =====================
 
-**Replaced by [CoordinateOffset](https://github.com/joshuaprince/CoordinateOffset)!**
+## **Replaced by [CoordinateOffset](https://github.com/joshuaprince/CoordinateOffset)!**
 
 ---
 
